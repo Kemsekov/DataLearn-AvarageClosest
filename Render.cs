@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Input;
 #pragma warning disable
-public class Render
+public abstract class Render
 {
     public Canvas Canvas;
     public CanvasShapeDrawer CanvasDrawer ;
@@ -53,7 +53,8 @@ public class Render
             DataLearning.DiffusionCoefficient += 1;
         }
     }
-
+    public abstract void PointerWheelChanged(object? sender, PointerWheelEventArgs e);
+    public abstract void RenderStuff();
     public void RenderInterface(){
         var x = WindowSize+10;
         CanvasDrawer.DrawText($"Diffusion theta is {DataLearning.DiffusionTheta}",new(x,20),Color.Azure,17);

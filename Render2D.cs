@@ -53,7 +53,7 @@ public class Render2D : Render
             CanvasDrawer.FillEllipse(WindowSize * new System.Numerics.Vector2(x, y), 10, 10, getColor(n.Output));
         }
     }
-    public void PointerWheelChanged(object? sender, PointerWheelEventArgs e)
+    public override void PointerWheelChanged(object? sender, PointerWheelEventArgs e)
     {
         var pos = e.GetPosition(Canvas);
         var input = new DenseVector(new float[] { (float)pos.X / WindowSize, (float)pos.Y / WindowSize});
@@ -61,7 +61,7 @@ public class Render2D : Render
         lock (DataLearning)
             DataSet.Data.Add(new Data(){Input = input, Output = output});
     }
-    public async void RenderStuff()
+    public override async void RenderStuff()
     {
         Func<Vector, Color> colorPick = x => Color.FromArgb((int)(255 * x[0] % 256), (int)(255 * x[1] % 256), (int)(255 * x[2] % 256));
         while (true)

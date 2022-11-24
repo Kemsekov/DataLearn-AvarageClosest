@@ -40,7 +40,7 @@ public class Render1D : Render
         }
     }
 
-    public void PointerWheelChanged(object? sender, PointerWheelEventArgs e)
+    public override void PointerWheelChanged(object? sender, PointerWheelEventArgs e)
     {
         var pos = e.GetPosition(Canvas);
         var input = new DenseVector(new float[] { (float)pos.X / WindowSize});
@@ -64,7 +64,7 @@ public class Render1D : Render
             return n2;
         });
     }
-    public async void RenderStuff()
+    public override async void RenderStuff()
     {
         while (true)
         {
