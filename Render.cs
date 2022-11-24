@@ -15,6 +15,7 @@ public abstract class Render
     public int InputVectorLength ;
     public int OutputVectorLength ;
     public DataSet DataSet ;
+    public AdaptiveDataSet AdaptiveDataSet;
     public DataSet Approximation ;
     public DataLearning DataLearning ;
     public int renderIntervalMilliseconds = 100;

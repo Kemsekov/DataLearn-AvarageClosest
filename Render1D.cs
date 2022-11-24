@@ -9,7 +9,7 @@ using Avalonia.Input;
 using MathNet.Numerics.LinearAlgebra.Single;
 public class Render1D : Render
 {
-   
+
     void Init()
     {
 
@@ -24,6 +24,7 @@ public class Render1D : Render
         this.OutputVectorLength = 1;
         this.DataSet = new DataSet(InputVectorLength,OutputVectorLength);
         this.DataLearning = new DataLearning();
+        this.AdaptiveDataSet = new AdaptiveDataSet(DataSet,DataLearning,10);
         this.Approximation = DataLearning.GetApproximationSet(ApproximationSize,DataSet,1,new DenseVector(new float[DataSet.InputVectorLength]));
     }
 
@@ -45,8 +46,10 @@ public class Render1D : Render
         var pos = e.GetPosition(Canvas);
         var input = new DenseVector(new float[] { (float)pos.X / WindowSize});
         var output = new DenseVector(new float[] { (float)pos.Y / WindowSize});
-        lock (DataLearning)
+        lock (DataLearning){
+            // AdaptiveDataSet.Add(new Data(){Input = input, Output = output});
             DataSet.Data.Add(new Data(){Input = input, Output = output});
+        }
     }
     void DrawFunction(DataSet dataSet, Color color)
     {

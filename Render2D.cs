@@ -25,6 +25,7 @@ public class Render2D : Render
         this.DataSet = new DataSet(InputVectorLength,OutputVectorLength);
         this.DataLearning = new DataLearning();
         this.Approximation = DataLearning.GetApproximationSet(ApproximationSize,DataSet,1,new DenseVector(new float[DataSet.InputVectorLength]));
+        this.AdaptiveDataSet = new AdaptiveDataSet(DataSet,DataLearning,100);
         var n1 = Random.Shared.Next(256);
         var n2 = Random.Shared.Next(256);
         var n3 = Random.Shared.Next(256);
@@ -58,8 +59,13 @@ public class Render2D : Render
         var pos = e.GetPosition(Canvas);
         var input = new DenseVector(new float[] { (float)pos.X / WindowSize, (float)pos.Y / WindowSize});
         var output = new DenseVector(new float[] { (float)(ChosenColor.R) / 255, (float)(ChosenColor.G) / 255, (float)(ChosenColor.B) / 255 });
-        lock (DataLearning)
-            DataSet.Data.Add(new Data(){Input = input, Output = output});
+        var toAdd = new Data(){Input = input, Output = output};
+        lock (DataLearning){
+            DataSet.Data.Add(toAdd);
+            // AdaptiveDataSet.AddByMergingWithClosest(toAdd);
+            // AdaptiveDataSet.AddByMergingWithPrediction(toAdd);
+            // AdaptiveDataSet.AddByReplacingClosest(toAdd);
+        }
     }
     public override async void RenderStuff()
     {
