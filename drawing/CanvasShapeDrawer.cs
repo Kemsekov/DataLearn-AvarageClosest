@@ -9,7 +9,6 @@ using Avalonia.Controls.Shapes;
 using Avalonia.Layout;
 using Avalonia.Media;
 using System.Drawing.Drawing2D;
-namespace Test;
 public class CanvasShapeDrawer
 {
     ObjectPool<Line> lines;

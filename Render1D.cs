@@ -7,26 +7,13 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Input;
 using MathNet.Numerics.LinearAlgebra.Single;
-namespace Test;
-public class Render1D
+public class Render1D : Render
 {
-    public Canvas Canvas;
-    public CanvasShapeDrawer CanvasDrawer { get; }
-    public int ApproximationSize { get; }
-    public int InputVectorLength { get; }
-    public int OutputVectorLength { get; }
-    public DataSet DataSet { get; }
-    public DataSet Approximation { get; }
-    public DataLearning DataLearning { get; }
-    int renderIntervalMilliseconds = 100;
-    int computeIntervalMilliseconds = 100;
-    float WindowSize = 1000f;
+   
     void Init()
     {
 
     }
-    bool Pause = false;
-
     public Render1D(Canvas canvas)
     {
         Canvas = canvas;
@@ -52,32 +39,7 @@ public class Render1D
             CanvasDrawer.FillEllipse(WindowSize * new System.Numerics.Vector2(x, y), 10, 10, getColor(n.Output));
         }
     }
-    public void OnKeyDown(object? sender, KeyEventArgs e)
-    {
-        if (e.Key == Key.Space)
-        {
-            Pause = !Pause;
-        }
-        if (e.Key == Key.R)
-        {
-            lock (DataLearning)
-            {
-                DataSet.Data.Clear();
-                DataSet.Data.Clear();
-            }
-        }
-        if (e.Key == Key.Up)
-        {
-            DataLearning.DiffusionTheta *= 2;
-            System.Console.WriteLine($"Diffusion theta is {DataLearning.DiffusionTheta}");
-        }
-        if (e.Key == Key.Down)
-        {
-            DataLearning.DiffusionTheta /= 2;
-            System.Console.WriteLine($"Diffusion theta is {DataLearning.DiffusionTheta}");
-        }
 
-    }
     public void PointerWheelChanged(object? sender, PointerWheelEventArgs e)
     {
         var pos = e.GetPosition(Canvas);
@@ -110,24 +72,9 @@ public class Render1D
             DrawFunction(Approximation,Color.Blue);
             if(!Pause)
             DrawData(DataSet, x => Color.Red);
+            RenderInterface();
             CanvasDrawer.Dispatch();
             await Task.Delay(renderIntervalMilliseconds);
-        }
-    }
-    public async void ComputeStuff()
-    {
-        var watch = new Stopwatch();
-        while (true)
-        {
-            watch.Restart();
-            if(!Pause)
-            lock (DataLearning){
-                DataLearning.Diffuse(DataSet,Approximation,2);
-                // DataLearning.SmoothApproximation(Approximation);
-            }
-            watch.Stop();
-            // System.Console.WriteLine($"Compute approximation {watch.ElapsedMilliseconds}");
-            await Task.Delay(computeIntervalMilliseconds);
         }
     }
 }

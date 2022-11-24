@@ -31,9 +31,16 @@ public class DataSet{
 public class DataLearning
 {
     /// <summary>
-    /// Lowest value for data changing
+    /// Lowest value for data changing. 
+    /// When big <see langword="Diffuse"/> method will 
+    /// take more average values from all dataset, 
+    /// when small <see langword="Diffuse"/> method will consider local values more valuable.
     /// </summary>
     public float DiffusionTheta = 0.001f;
+    /// <summary>
+    /// How strong local values is
+    /// </summary>
+    public float DiffusionCoefficient = 2;
 
     public DataLearning()
     {
@@ -46,11 +53,10 @@ public class DataLearning
     /// <summary>
     /// Diffuses <paramref name="data"/> on <paramref name="input"/> vector
     /// </summary>
-    /// <param name="diffusionCoefficient">Power of diffusion. The bigger, the more important local data, and less important data that is far away in input space</param>
     /// <returns>
     /// Diffused vector which corresponds to 'average' of local data
     /// </returns>
-    public Vector Diffuse(DataSet data, ref Vector input, float diffusionCoefficient = 2)
+    public Vector Diffuse(DataSet data, ref Vector input)
     {
         Vector averageOutputData = new DenseVector(new float[data.OutputVectorLength]);
         float addedCoeff = 0;
@@ -59,7 +65,7 @@ public class DataLearning
         for(int i = 0;i<data.Data.Count;i++)
         {
             var dt = data.Data[i];
-            distSquared = MathF.Pow(Distance(ref input,ref dt.Input),diffusionCoefficient);
+            distSquared = MathF.Pow(Distance(ref input,ref dt.Input),DiffusionCoefficient);
             distSquared = MathF.Max(distSquared, DiffusionTheta);
             coeff = ActivationFunction(distSquared);
             addedCoeff += coeff;
@@ -103,14 +109,13 @@ public class DataLearning
     /// <summary>
     /// Diffuses <paramref name="dataSet"/> on <paramref name="Approximation"/> dataset.
     /// </summary>
-    /// <param name="diffusionCoefficient">Power of diffusion. The bigger, the more important local data, and less important data that is far away in input space</param>
-    public void Diffuse(DataSet dataSet, DataSet Approximation, float diffusionCoefficient = 2)
+    public void Diffuse(DataSet dataSet, DataSet Approximation)
     {
         if(dataSet.Data.Count==0) return;
         Parallel.For(0, Approximation.Data.Count, (i, _) =>
         {
             var approximation = Approximation.Data[i];
-            approximation.Output = Diffuse(dataSet, ref approximation.Input,diffusionCoefficient);
+            approximation.Output = Diffuse(dataSet, ref approximation.Input);
             Approximation.Data[i] = approximation;
         });
     }
