@@ -179,9 +179,6 @@ public class Examples
         System.Console.WriteLine("Absolute Error is " + absError);
         System.Console.WriteLine("MaxError is " + maxError);
     }
-    public static void RenderPlayground(){
-        
-    }
     public static (float error, float absError, float maxError) ComputeError(IEnumerable<Vector> test, AdaptiveDataSet dataSet, Func<Vector, Data> getData)
     {
 
