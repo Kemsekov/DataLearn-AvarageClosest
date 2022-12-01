@@ -61,10 +61,8 @@ public class Render2D : Render
         var output = new DenseVector(new float[] { (float)(ChosenColor.R) / 255, (float)(ChosenColor.G) / 255, (float)(ChosenColor.B) / 255 });
         var toAdd = new Data(){Input = input, Output = output};
         lock (DataLearning){
-            DataSet.Data.Add(toAdd);
-            // AdaptiveDataSet.AddByMergingWithClosest(toAdd);
-            // AdaptiveDataSet.AddByMergingWithPrediction(toAdd);
-            // AdaptiveDataSet.AddByReplacingClosest(toAdd);
+            // DataSet.Data.Add(toAdd);
+            AdaptiveDataSet.AddByMergingWithClosest(toAdd);
         }
     }
     public override async void RenderStuff()
@@ -74,7 +72,7 @@ public class Render2D : Render
         {
         CanvasDrawer.Clear(System.Drawing.Color.Empty);
             if(!Pause)
-            DrawData(Approximation, colorPick,25);
+            DrawData(Approximation, colorPick,20);
             DrawData(DataSet, colorPick);
             DrawColorPicker();
             RenderInterface();

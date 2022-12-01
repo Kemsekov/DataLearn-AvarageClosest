@@ -11,9 +11,9 @@ public struct Data{
 }
 
 public class DataSet{
-    public int InputVectorLength;
-    public int OutputVectorLength;
-    public List<Data> Data;
+    public int InputVectorLength{get;}
+    public int OutputVectorLength{get;}
+    public List<Data> Data{get;}
     public DataSet(int inputVectorLength, int outputVectorLength, List<Data>? data = null)
     {
         this.InputVectorLength = inputVectorLength;
@@ -36,7 +36,7 @@ public class DataLearning
     /// take more average values from all dataset, 
     /// when small <see langword="Diffuse"/> method will consider local values more valuable.
     /// </summary>
-    public float DiffusionTheta = 0.000001f;
+    public float DiffusionTheta = 0.001f;
     /// <summary>
     /// How strong local values is
     /// </summary>

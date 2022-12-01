@@ -14,12 +14,18 @@ public class AdaptiveDataSet
     public DataSet DataSet { get; }
     public int MaxElements { get; }
     public DataLearning DataLearning { get; }
-
+    public int InputVectorLength => DataSet.InputVectorLength;
+    public int OutputVectorLength => DataSet.OutputVectorLength;
     public AdaptiveDataSet(DataSet dataSet, DataLearning dataLearning, int maxElements)
     {
         this.DataSet = dataSet;
         this.MaxElements = maxElements;
         this.DataLearning = dataLearning;
+    }
+    public AdaptiveDataSet(int inputVectorLength, int outputVectorLength, int maxElements){
+        this.DataSet = new DataSet(inputVectorLength,outputVectorLength);
+        this.MaxElements = maxElements;
+        this.DataLearning = new DataLearning();
     }
     (Data data, int id) GetClosest(Data element){
         return DataSet.Data
@@ -36,62 +42,17 @@ public class AdaptiveDataSet
         var id = rand.Next(count);
         return id;
     }
+    
+    public Vector Predict(Vector input){
+        return DataLearning.Diffuse(DataSet,ref input);
+    }
+
     /// <summary>
     /// Merges <see langword="element.Output"/> vector with data prediction on <see langword="element.Input"/> vector
     /// </summary>
     public void MergeWithPrediction(ref Data element){
         var prediction = DataLearning.Diffuse(DataSet, ref element.Input);
         element.Output = (Vector)(prediction + element.Output).Divide(2);
-    }
-
-    /// <summary>
-    /// For given element it finds closest element from dataset by input vector, <br/>
-    /// finds a prediction for element's input vector<br/>
-    /// averages prediction with output vector.<br/>
-    /// Replaces closest found element.
-    /// </summary>
-    public void AddByMergingWithPrediction(Data element)
-    {
-        if (DataSet.Data.Count < MaxElements)
-        {
-            DataSet.Data.Add(element);
-            return;
-        }
-        var toReplace = GetClosest(element);    
-
-        MergeWithPrediction(ref element);
-
-        DataSet.Data[toReplace.id] = element;
-    }
-    /// <summary>
-    /// For given element it finds closest element from dataset by input vector,
-    /// averages their input vectors, finds a prediction for that input vector
-    /// and averages prediction with output vector.<br/>
-    /// Replaces random found element.
-    /// </summary>
-    public void AddByMergingWithPredictionOnRandom(Data element)
-    {
-        if (DataSet.Data.Count < MaxElements)
-        {
-            DataSet.Data.Add(element);
-            return;
-        }
-        MergeWithPrediction(ref element);
-        DataSet.Data[GetRandomId()] = element;
-    }
-    /// <summary>
-    /// For given element, finds another closest by input vector element
-    /// and replace it with given.
-    /// </summary>
-    public void AddByReplacingClosest(Data element)
-    {
-        if (DataSet.Data.Count < MaxElements)
-        {
-            DataSet.Data.Add(element);
-            return;
-        }
-        var toReplace = GetClosest(element);
-        DataSet.Data[toReplace.id] = element;
     }
     /// <summary>
     /// For given element, finds another closest by input vector element
