@@ -65,6 +65,7 @@ public abstract class Render
         CanvasDrawer.DrawText("Press Left/Right to change DiffusionCoefficient",new(x,100),Color.Azure,17);
         CanvasDrawer.DrawText("Press R to clear data",new(x,120),Color.Azure,17);
         CanvasDrawer.DrawText("Press Space to hide data",new(x,140),Color.Azure,17);
+        CanvasDrawer.DrawText("Use wheel to place elements",new(x,160),Color.Azure,17);
         
     }
     public async void ComputeStuff()

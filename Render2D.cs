@@ -19,7 +19,7 @@ public class Render2D : Render
         Canvas = canvas;
         var drawer = new CanvasShapeDrawer(Canvas);
         this.CanvasDrawer = drawer;
-        this.ApproximationSize = 32*32;
+        this.ApproximationSize = 40*40;
         this.InputVectorLength = 2;
         this.OutputVectorLength = 3;
         this.DataSet = new DataSet(InputVectorLength,OutputVectorLength);
@@ -43,7 +43,7 @@ public class Render2D : Render
         base.OnKeyDown(sender,e);
     }
 
-    void DrawData(DataSet dataSet, Func<Vector, Color> getColor)
+    void DrawData(DataSet dataSet, Func<Vector, Color> getColor, int size = 10)
     {
         var data = dataSet.Data;
         for (int i = 0; i < data.Count; i++)
@@ -51,7 +51,7 @@ public class Render2D : Render
             var n = data[i];
             var x = n.Input[0];
             var y = n.Input[1];
-            CanvasDrawer.FillEllipse(WindowSize * new System.Numerics.Vector2(x, y), 10, 10, getColor(n.Output));
+            CanvasDrawer.FillEllipse(WindowSize * new System.Numerics.Vector2(x, y), size, size, getColor(n.Output));
         }
     }
     public override void PointerWheelChanged(object? sender, PointerWheelEventArgs e)
@@ -73,8 +73,8 @@ public class Render2D : Render
         while (true)
         {
         CanvasDrawer.Clear(System.Drawing.Color.Empty);
-            DrawData(Approximation, colorPick);
             if(!Pause)
+            DrawData(Approximation, colorPick,25);
             DrawData(DataSet, colorPick);
             DrawColorPicker();
             RenderInterface();

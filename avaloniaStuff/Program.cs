@@ -1,5 +1,13 @@
 ﻿using Avalonia;
+using MathNet.Numerics.LinearAlgebra.Single;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Text;
+
+// Examples.Example();
 
 namespace Test
 {
