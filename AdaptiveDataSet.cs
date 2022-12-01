@@ -79,9 +79,9 @@ public class AdaptiveDataSet
         foreach (var t in test)
         {
             var data = getData(t);
-            var inpt = data.Input;
+            var input = data.Input;
             var actual = data.Output;
-            var prediction = Predict(inpt);
+            var prediction = Predict(input);
             var diff = (prediction - actual);
             if(maxDifference.PointwiseAbs().Sum()<diff.PointwiseAbs().Sum())
                 maxDifference = (Vector)diff;
