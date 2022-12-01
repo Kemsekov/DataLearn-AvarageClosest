@@ -72,4 +72,27 @@ public class AdaptiveDataSet
 
         DataSet.Data[toReplace.id] = element;
     }
+    public (float error,float absError, float maxError) ComputeError(IEnumerable<Vector> test, Func<Vector,Data> getData){
+        Vector difference = new DenseVector(new float[OutputVectorLength]);
+        Vector absDifference = new DenseVector(new float[OutputVectorLength]);
+        Vector maxDifference = new DenseVector(new float[OutputVectorLength]);
+        foreach (var t in test)
+        {
+            var data = getData(t);
+            var inpt = data.Input;
+            var actual = data.Output;
+            var prediction = Predict(inpt);
+            var diff = (prediction - actual);
+            if(maxDifference.PointwiseAbs().Sum()<diff.PointwiseAbs().Sum())
+                maxDifference = (Vector)diff;
+            difference = (Vector)(difference+diff);
+            absDifference = (Vector)(absDifference+diff.PointwiseAbs());
+        }
+        difference = (Vector)difference.Divide(test.Count());
+        absDifference = (Vector)absDifference.Divide(test.Count());
+        var absError = absDifference.Average();
+        var error = difference.PointwiseAbs().Average();
+        var maxError = maxDifference.PointwiseAbs().Average();
+        return (error,absError,maxError);
+    }
 }
