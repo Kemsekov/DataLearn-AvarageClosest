@@ -40,6 +40,18 @@ public class Render2D : Render
             var n3 = Random.Shared.Next(256);
             ChosenColor = Color.FromArgb(n1, n2, n3);
         }
+        if (e.Key == Key.Q){
+            var n1 = Random.Shared.Next(30)+ChosenColor.R-30;
+            var n2 = Random.Shared.Next(30)+ChosenColor.G-30;
+            var n3 = Random.Shared.Next(30)+ChosenColor.B-30;
+            if(n1<0 || n1>255)
+                n1 = ChosenColor.R;
+            if(n2<0 || n2>255)
+                n2 = ChosenColor.G;
+            if(n3<0 || n3>255)
+                n3 = ChosenColor.B;
+            ChosenColor = Color.FromArgb(n1%256, n2%256, n3%256);
+        }
         base.OnKeyDown(sender,e);
     }
 
@@ -84,6 +96,7 @@ public class Render2D : Render
         var pos = new System.Numerics.Vector2(1.1f, 0.9f) * WindowSize;
         var size = 0.1f * WindowSize;
         CanvasDrawer.FillEllipse(pos,size,size, ChosenColor);
+        CanvasDrawer.DrawText($"Press Q to shift color a bit",new(pos.X-size+10,pos.Y-size),Color.Azure,17);
         CanvasDrawer.DrawText($"Press E to change color",new(pos.X-size+10,pos.Y-size+20),Color.Azure,17);
 
     }
