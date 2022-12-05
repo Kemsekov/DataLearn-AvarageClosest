@@ -28,13 +28,13 @@ public class AdaptiveDataSet
         this.MaxElements = maxElements;
         this.DataLearning = new DataLearning();
     }
-    (Data data, int id) GetClosest(Data element)
+    (IData data, int id) GetClosest(IData element)
     {
         return DataSet.Data
             .Select((data, id) => (data, id))
             .MinBy(x => (x.data.Input - element.Input).L1Norm());
     }
-    (Data data, int id) GetRandom(Random? rand = null)
+    (IData data, int id) GetRandom(Random? rand = null)
     {
         var id = GetRandomId(rand);
         return (DataSet.Data[id], id);
@@ -49,15 +49,15 @@ public class AdaptiveDataSet
 
     public Vector Predict(Vector input)
     {
-        return DataLearning.Diffuse(DataSet, ref input);
+        return DataLearning.Diffuse(DataSet, input);
     }
 
     /// <summary>
     /// Merges <see langword="element.Output"/> vector with data prediction on <see langword="element.Input"/> vector
     /// </summary>
-    public void MergeWithPrediction(ref Data element)
+    public void MergeWithPrediction(IData element)
     {
-        var prediction = DataLearning.Diffuse(DataSet, ref element.Input);
+        var prediction = DataLearning.Diffuse(DataSet, element.Input);
         element.Output = (Vector)(prediction + element.Output).Divide(2);
     }
     /// <summary>
@@ -66,7 +66,7 @@ public class AdaptiveDataSet
     /// Replaces closest found element.
     /// </summary>
     /// <param name="element"></param>
-    public void AddByMergingWithClosest(Data element)
+    public void AddByMergingWithClosest(IData element)
     {
         if (DataSet.Data.Count < MaxElements)
         {
