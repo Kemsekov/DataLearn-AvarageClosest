@@ -87,47 +87,6 @@ public class DataLearning
         return ((float)(n1 - n2).L2Norm());
     }
 
-    float DistanceOnMissingData(ref Data d1, ref Data d2, byte[] inputMissingColumns, byte[] outputMissingColumns)
-    {
-        float result = 0;
-        var inputLen = d1.Input.Count;
-        var outputLen = d1.Output.Count;
-        for (int i = 0; i < inputLen; i++)
-        {
-            if (inputMissingColumns[i] != 0) continue;
-            result += d1.Input[i] * d2.Input[i];
-        }
-        for (int i = 0; i < outputLen; i++)
-        {
-            if (outputMissingColumns[i] != 0) continue;
-            result += d1.Output[i] * d2.Output[i];
-        }
-        return MathF.Sqrt(result);
-    }
-
-    public Vector Diffuse(DataSet data, Vector input, Func<Data,Vector> getInput, Func<Data,Vector> getOutput)
-    {
-        var outputLength = getOutput(data.Data[0]).Count;
-        Vector averageOutputData = new DenseVector(new float[outputLength]);
-        float addedCoeff = 0;
-        float coeff;
-        float distSquared;
-        for (int i = 0; i < data.Data.Count; i++)
-        {
-            var dt = data.Data[i];
-            var dtInput = getInput(dt);
-            var dtOutput = getOutput(dt);
-            distSquared = MathF.Pow(Distance(ref input, ref dtInput), DiffusionCoefficient);
-            distSquared = Math.Max(distSquared, DiffusionTheta);
-            coeff = ActivationFunction(distSquared);
-            addedCoeff += coeff;
-            averageOutputData = (Vector)(averageOutputData + dtOutput * coeff);
-        }
-        if (addedCoeff < DiffusionTheta) addedCoeff = 1;
-        averageOutputData = (Vector)averageOutputData.Divide(addedCoeff);
-        return averageOutputData;
-    }
-
     /// <summary>
     /// Diffuses <paramref name="data"/> on <paramref name="input"/> vector
     /// </summary>

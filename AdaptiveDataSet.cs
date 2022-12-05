@@ -51,68 +51,6 @@ public class AdaptiveDataSet
     {
         return DataLearning.Diffuse(DataSet, ref input);
     }
-    /// <summary>
-    /// Accepts data with missing values and computes all it's other values.<br/>
-    /// Index of missingData is id of column, value == 1 if given column is missing.<br/>
-    /// For example with vector (1,2,_,3) missingColumns would be [0,0,1,0]
-    /// </summary>
-    /// <returns>Data which contains both input and output with filled missing values</returns>
-    public Data FillMissingValues(Data dataWithMissingValues, byte[] inputMissingColumns, byte[] outputMissingColumns)
-    {
-        var concated = inputMissingColumns.Concat(outputMissingColumns);
-        var outputLength = concated.Count(x=>x==1);
-        var inputLength = concated.Count(x=>x==0);
-        var getInput = (Data dt) =>
-        {
-            var res = new float[inputLength];
-            int next = 0;
-            for (int i = 0; i < InputVectorLength; i++)
-            {
-                if (inputMissingColumns[i] == 0)
-                    res[next++] = dt.Input[i];
-            }
-            for (int i = 0; i < OutputVectorLength; i++)
-            {
-                if (outputMissingColumns[i] == 0)
-                    res[next++] = dt.Output[i];
-            }
-            return new DenseVector(res);
-        };
-        var getOutput = (Data dt) =>
-        {
-            var res = new float[outputLength];
-            int next = 0;
-            for (int i = 0; i < InputVectorLength; i++)
-            {
-                if (inputMissingColumns[i] != 0)
-                    res[next++] = dt.Input[i];
-            }
-            for (int i = 0; i < OutputVectorLength; i++)
-            {
-                if (outputMissingColumns[i] != 0)
-                    res[next++] = dt.Output[i];
-            }
-            return new DenseVector(res);
-        };
-        var result = DataLearning.Diffuse(DataSet, getInput(dataWithMissingValues), getInput, getOutput);
-        var resultData = dataWithMissingValues * 1;
-        var next = 0;
-        for (int i = 0; i < InputVectorLength; i++)
-        {
-            if (inputMissingColumns[i] != 0)
-            {
-                resultData.Input[i] = result[next++];
-            }
-        }
-        for (int i = 0; i < OutputVectorLength; i++)
-        {
-            if (outputMissingColumns[i] != 0)
-            {
-                resultData.Output[i] = result[next++];
-            }
-        }
-        return resultData;
-    }
 
     /// <summary>
     /// Merges <see langword="element.Output"/> vector with data prediction on <see langword="element.Input"/> vector
