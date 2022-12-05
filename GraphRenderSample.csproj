@@ -20,5 +20,8 @@
     <PackageReference Include="XamlNameReferenceGenerator" Version="1.3.4"/>
     <PackageReference Include="MathNet.Numerics" Version="5.0.0"/>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1"/>
+    <PackageReference Include="Microsoft.ML" Version="2.0.1-preview.22573.9"/>
+    <PackageReference Include="Microsoft.ML.FastTree" Version="2.0.1-preview.22573.9"/>
+    <PackageReference Include="Microsoft.ML.LightGbm" Version="2.0.1-preview.22573.9"/>
   </ItemGroup>
 </Project>

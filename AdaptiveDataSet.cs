@@ -83,6 +83,13 @@ public class AdaptiveDataSet
             var actual = data.Output;
             var prediction = Predict(input);
             var diff = (prediction - actual);
+
+            //--- TODO: remove
+            var predId = prediction.MaximumIndex();
+            var actualId = actual.MaximumIndex();
+            var predVal = prediction[predId];
+            //---
+
             if(maxDifference.PointwiseAbs().Sum()<diff.PointwiseAbs().Sum())
                 maxDifference = (Vector)diff;
             difference = (Vector)(difference+diff);
@@ -90,9 +97,9 @@ public class AdaptiveDataSet
         }
         difference = (Vector)difference.Divide(test.Count());
         absDifference = (Vector)absDifference.Divide(test.Count());
-        var absError = absDifference.Average();
-        var error = difference.PointwiseAbs().Average();
-        var maxError = maxDifference.PointwiseAbs().Average();
+        var absError = absDifference.Sum();
+        var error = difference.PointwiseAbs().Sum();
+        var maxError = maxDifference.PointwiseAbs().Sum();
         return (error,absError,maxError);
     }
 }

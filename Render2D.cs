@@ -51,7 +51,7 @@ public class Render2D : Render
             var n = data[i];
             var x = n.Input[0];
             var y = n.Input[1];
-            CanvasDrawer.FillEllipse(WindowSize * new System.Numerics.Vector2(x, y), size, size, getColor(n.Output));
+            CanvasDrawer.FillEllipse(WindowSize * new System.Numerics.Vector2(((float)x), ((float)y)), size, size, getColor(n.Output));
         }
     }
     public override void PointerWheelChanged(object? sender, PointerWheelEventArgs e)

@@ -55,7 +55,7 @@ public class Examples
         {
             for (int b = 0; b < d.Count; b++)
             {
-                normalizer[b] = MathF.Max(normalizer[b], MathF.Abs(d[b]));
+                normalizer[b] = Math.Max(normalizer[b], Math.Abs(d[b]));
             }
         }
         return normalizer;
@@ -64,42 +64,7 @@ public class Examples
         for(int i = 0;i<data.Length;i++)
             data[i] = modification(data[i]);
     }
-    public static void Example4()
-    {
-        var file = "spotify.csv";
-        System.Console.WriteLine(file);
-        var toData =
-         (string x) =>
-         {
-             if (float.TryParse(x, out var result)) return result;
-             throw new ArgumentException("Wrong file format");
-         };
-        var data = LoadCsv(file, toData).ToArray();
-
-        Shuffle(new Random(), data);
-
-        var normalizer = GetNormalizer(data);
-        var input = (Vector v) => (Vector)v.PointwiseDivide(normalizer).SubVector(0, 13);
-        var output = (Vector v) => (Vector)v.PointwiseDivide(normalizer).SubVector(13, 1);
-
-        var inputLength = input(data[0]).Count;
-        var outputLength = output(data[0]).Count;
-
-        var test = data[..50];
-        var train = data[50..];
-
-        var adaptiveDataSet = new AdaptiveDataSet(inputLength, outputLength, 1000);
-        foreach (var t in train)
-        {
-            var d = new Data() { Input = input(t), Output = output(t) };
-            // dataSet.Data.Add(d);
-            adaptiveDataSet.AddByMergingWithClosest(d);
-        }
-        (var error, var absError, var maxError) = ComputeError(test, adaptiveDataSet, v => new() { Input = input(v), Output = output(v) });
-        System.Console.WriteLine("Error is " + error);
-        System.Console.WriteLine("Absolute Error is " + absError);
-        System.Console.WriteLine("MaxError is " + maxError);
-    }
+    
     public static void Example3()
     {
         var file = "stats.csv";
@@ -119,8 +84,12 @@ public class Examples
 
         var normalizer = GetNormalizer(data);
         var input = (Vector v) => (Vector)v.PointwiseDivide(normalizer).SubVector(0, 7);
-        var output = (Vector v) => (Vector)v.PointwiseDivide(normalizer).SubVector(7, 3);
-
+        var output = (Vector v) => {
+               var vec = new DenseVector(new float[races]);
+               var id = (int)v.First();
+               vec[id] = 1;
+               return vec;
+           };
         var inputLength = input(data[0]).Count;
         var outputLength = output(data[0]).Count;
 
@@ -128,12 +97,16 @@ public class Examples
         var train = data[500..];
 
         var adaptiveDataSet = new AdaptiveDataSet(inputLength, outputLength, 1000);
+        adaptiveDataSet.DataLearning.DiffusionCoefficient=8;
+        adaptiveDataSet.DataLearning.DiffusionTheta=0.000000001f;
+        var watch = new Stopwatch();
+        watch.Start();
         foreach (var t in train)
         {
             var d = new Data() { Input = input(t), Output = output(t) };
-            // dataSet.Data.Add(d);
             adaptiveDataSet.AddByMergingWithClosest(d);
         }
+        System.Console.WriteLine($"Added data in {watch.ElapsedMilliseconds} ms");
         (var error, var absError, var maxError) = ComputeError(test, adaptiveDataSet, v => new() { Input = input(v), Output = output(v) });
         System.Console.WriteLine("Error is " + error);
         System.Console.WriteLine("Absolute Error is " + absError);
@@ -164,7 +137,7 @@ public class Examples
         var inputLength = input(data[0]).Count;
         var outputLength = output(data[0]).Count;
 
-        var adaptiveDataSet = new AdaptiveDataSet(inputLength, outputLength, 5000);
+        var adaptiveDataSet = new AdaptiveDataSet(inputLength, outputLength, 1000);
 
         foreach (var t in train)
         {

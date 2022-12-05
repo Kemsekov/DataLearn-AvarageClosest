@@ -66,7 +66,7 @@ public class DataLearning
         {
             var dt = data.Data[i];
             distSquared = MathF.Pow(Distance(ref input,ref dt.Input),DiffusionCoefficient);
-            distSquared = MathF.Max(distSquared, DiffusionTheta);
+            distSquared = Math.Max(distSquared, DiffusionTheta);
             coeff = ActivationFunction(distSquared);
             addedCoeff += coeff;
             averageOutputData = (Vector)(averageOutputData + dt.Output * coeff);

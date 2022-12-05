@@ -37,7 +37,7 @@ public class Render1D : Render
             var n = data[i];
             var x = n.Input[0];
             var y = n.Output[0];
-            CanvasDrawer.FillEllipse(WindowSize * new System.Numerics.Vector2(x, y), 10, 10, getColor(n.Output));
+            CanvasDrawer.FillEllipse(WindowSize * new System.Numerics.Vector2(((float)x), ((float)y)), 10, 10, getColor(n.Output));
         }
     }
 
@@ -61,8 +61,8 @@ public class Render1D : Render
             var x2 = n2.Input.At(0);
             var y1 = n1.Output.At(0);
             var y2 = n2.Output.At(0);
-            var p1 = WindowSize * new System.Numerics.Vector2(x1, y1);
-            var p2 = WindowSize * new System.Numerics.Vector2(x2, y2);
+            var p1 = WindowSize * new System.Numerics.Vector2(((float)x1), ((float)y1));
+            var p2 = WindowSize * new System.Numerics.Vector2(((float)x2), ((float)y2));
             CanvasDrawer.DrawLine(p1, p2, color, 3);
             return n2;
         });
