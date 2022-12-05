@@ -5,15 +5,51 @@ using System.Linq;
 using System.Threading.Tasks;
 using MathNet.Numerics.LinearAlgebra.Single;
 
-public struct Data{
+public struct Data : 
+    System.Numerics.IAdditionOperators<Data,Data,Data>,
+    System.Numerics.ISubtractionOperators<Data,Data,Data>,
+    System.Numerics.IMultiplyOperators<Data,float,Data>
+{
     public Vector Input;
     public Vector Output;
+
+    public static Data operator +(Data left, Data right)
+    {
+        return new(){
+            Input = (Vector)(left.Input+right.Input),
+            Output = (Vector)(left.Output+right.Output)
+        };
+    }
+
+    public static Data operator -(Data left, Data right)
+    {
+        return new(){
+            Input = (Vector)(left.Input-right.Input),
+            Output = (Vector)(left.Output-right.Output)
+        };
+    }
+
+    public static Data operator *(Data left, float right)
+    {
+        return new(){
+            Input = (Vector)(left.Input*right),
+            Output = (Vector)(left.Output*right)
+        };
+        
+    }
+    public Data Divide(float value){
+        return new(){
+            Input = (Vector)Input.Divide(value),
+            Output = (Vector)Output.Divide(value)
+        };
+    }
 }
 
-public class DataSet{
-    public int InputVectorLength{get;}
-    public int OutputVectorLength{get;}
-    public List<Data> Data{get;}
+public class DataSet
+{
+    public int InputVectorLength { get; }
+    public int OutputVectorLength { get; }
+    public List<Data> Data { get; }
     public DataSet(int inputVectorLength, int outputVectorLength, List<Data>? data = null)
     {
         this.InputVectorLength = inputVectorLength;
@@ -48,8 +84,50 @@ public class DataLearning
 
     float Distance(ref Vector n1, ref Vector n2)
     {
-        return ((float)(n1-n2).L2Norm());
+        return ((float)(n1 - n2).L2Norm());
     }
+
+    float DistanceOnMissingData(ref Data d1, ref Data d2, byte[] inputMissingColumns, byte[] outputMissingColumns)
+    {
+        float result = 0;
+        var inputLen = d1.Input.Count;
+        var outputLen = d1.Output.Count;
+        for (int i = 0; i < inputLen; i++)
+        {
+            if (inputMissingColumns[i] != 0) continue;
+            result += d1.Input[i] * d2.Input[i];
+        }
+        for (int i = 0; i < outputLen; i++)
+        {
+            if (outputMissingColumns[i] != 0) continue;
+            result += d1.Output[i] * d2.Output[i];
+        }
+        return MathF.Sqrt(result);
+    }
+
+    public Vector Diffuse(DataSet data, Vector input, Func<Data,Vector> getInput, Func<Data,Vector> getOutput)
+    {
+        var outputLength = getOutput(data.Data[0]).Count;
+        Vector averageOutputData = new DenseVector(new float[outputLength]);
+        float addedCoeff = 0;
+        float coeff;
+        float distSquared;
+        for (int i = 0; i < data.Data.Count; i++)
+        {
+            var dt = data.Data[i];
+            var dtInput = getInput(dt);
+            var dtOutput = getOutput(dt);
+            distSquared = MathF.Pow(Distance(ref input, ref dtInput), DiffusionCoefficient);
+            distSquared = Math.Max(distSquared, DiffusionTheta);
+            coeff = ActivationFunction(distSquared);
+            addedCoeff += coeff;
+            averageOutputData = (Vector)(averageOutputData + dtOutput * coeff);
+        }
+        if (addedCoeff < DiffusionTheta) addedCoeff = 1;
+        averageOutputData = (Vector)averageOutputData.Divide(addedCoeff);
+        return averageOutputData;
+    }
+
     /// <summary>
     /// Diffuses <paramref name="data"/> on <paramref name="input"/> vector
     /// </summary>
@@ -62,16 +140,16 @@ public class DataLearning
         float addedCoeff = 0;
         float coeff;
         float distSquared;
-        for(int i = 0;i<data.Data.Count;i++)
+        for (int i = 0; i < data.Data.Count; i++)
         {
             var dt = data.Data[i];
-            distSquared = MathF.Pow(Distance(ref input,ref dt.Input),DiffusionCoefficient);
+            distSquared = MathF.Pow(Distance(ref input, ref dt.Input), DiffusionCoefficient);
             distSquared = Math.Max(distSquared, DiffusionTheta);
             coeff = ActivationFunction(distSquared);
             addedCoeff += coeff;
             averageOutputData = (Vector)(averageOutputData + dt.Output * coeff);
         }
-        if(addedCoeff<DiffusionTheta) addedCoeff = 1;
+        if (addedCoeff < DiffusionTheta) addedCoeff = 1;
         averageOutputData = (Vector)averageOutputData.Divide(addedCoeff);
         return averageOutputData;
     }
@@ -82,17 +160,18 @@ public class DataLearning
     /// scaled/shifted by <paramref name="CoordinatesScale"/> and <paramref name="CoordinatesShift"/>
     /// </summary>
     /// <param name="approximationSize">How many dots to create in space?</param>
-    public DataSet GetApproximationSet(int approximationSize, DataSet dataSet, float CoordinatesScale, Vector CoordinatesShift){
-        var Approximation = new DataSet(dataSet.InputVectorLength,dataSet.OutputVectorLength, new List<Data>(approximationSize));
+    public DataSet GetApproximationSet(int approximationSize, DataSet dataSet, float CoordinatesScale, Vector CoordinatesShift)
+    {
+        var Approximation = new DataSet(dataSet.InputVectorLength, dataSet.OutputVectorLength, new List<Data>(approximationSize));
         for (int i = 0; i < approximationSize; i++)
         {
             var input = new float[dataSet.InputVectorLength];
             var output = new float[dataSet.OutputVectorLength];
             Array.Fill(input, 0.5f);
             Array.Fill(output, 0.5f);
-            Approximation.Data.Add(new Data(){Input = new DenseVector(input),Output = new DenseVector(output)});
+            Approximation.Data.Add(new Data() { Input = new DenseVector(input), Output = new DenseVector(output) });
         }
-        DistributeData(Approximation,CoordinatesScale,CoordinatesShift);
+        DistributeData(Approximation, CoordinatesScale, CoordinatesShift);
         return Approximation;
     }
 
@@ -104,14 +183,14 @@ public class DataLearning
     /// <param name="distSquared"></param>
     public virtual float ActivationFunction(float distSquared)
     {
-        return 1 /(distSquared*distSquared);
+        return 1 / (distSquared * distSquared);
     }
     /// <summary>
     /// Diffuses <paramref name="dataSet"/> on <paramref name="Approximation"/> dataset.
     /// </summary>
     public void Diffuse(DataSet dataSet, DataSet Approximation)
     {
-        if(dataSet.Data.Count==0) return;
+        if (dataSet.Data.Count == 0) return;
         Parallel.For(0, Approximation.Data.Count, (i, _) =>
         {
             var approximation = Approximation.Data[i];
@@ -123,7 +202,7 @@ public class DataLearning
     /// <summary>
     /// Moves data points from each other to normally fill input vector space
     /// </summary>
-    public void DistributeData(DataSet dataSet, float CoordinatesScale,Vector CoordinatesShift)
+    public void DistributeData(DataSet dataSet, float CoordinatesScale, Vector CoordinatesShift)
     {
         var InputVectorLength = dataSet.InputVectorLength;
         var data = System.Runtime.InteropServices.CollectionsMarshal.AsSpan(dataSet.Data);
@@ -150,7 +229,7 @@ public class DataLearning
             position[0] += step;
             normalizeVector(ref position, step);
         }
-        NormalizeCoordinates(dataSet,CoordinatesScale,CoordinatesShift);
+        NormalizeCoordinates(dataSet, CoordinatesScale, CoordinatesShift);
     }
     /// <summary>
     /// Makes sure that <paramref name="InputVectorLength"/> part of data is filling bounds
@@ -165,7 +244,7 @@ public class DataLearning
         shift ??= new DenseVector(new float[dataSet.InputVectorLength]);
         for (int i = 0; i < data.Length; i++)
         {
-            var scaled = data[i].Input.Divide(max)*scaleCoefficient + shift;
+            var scaled = data[i].Input.Divide(max) * scaleCoefficient + shift;
             data[i].Input = (Vector)scaled;
         }
     }
