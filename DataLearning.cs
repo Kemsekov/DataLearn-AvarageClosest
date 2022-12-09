@@ -6,23 +6,57 @@ using System.Threading.Tasks;
 using MathNet.Numerics.LinearAlgebra.Single;
 
 
+//Add autoencoder support https://github.com/SciSharp/TensorFlow.NET
+
 //make that IData Input and Output can kinda change in a sense
 //that IData will have one single array as underlying data and you can pick some parts
 //of it to treat as input and output. It will be useful when combined with Diffuse method
 //in which you can feed not full Input vector, but mark missing all values with
 //unknown output as OutputVector, and diffuse will treat them accordingly  
 
-public interface IData{
+public interface IData
+{
     Vector Input{get;set;}
     Vector Output{get;set;}
-    int InputVectorLength => Input.Count;
-    int OutputVectorLength => Input.Count;
+    public static IData operator +(IData left, IData right)
+    {
+        return new Data(){Input = (Vector)(left.Input+right.Input),Output=(Vector)(left.Output+right.Output)};
+    }
+
+    public static IData operator *(IData left, float scalar)
+    {
+        return new Data(){Input=(Vector)(left.Input*scalar),Output = (Vector)(left.Output*scalar)};
+    }
+    IData Divide(float scalar);
+    IData Clone();
 }
 
 public struct Data : IData
 {
+    public Data(Vector input, Vector output)
+    {
+        Input = input;
+        Output = output;
+    }
+    public Data(float[] input, float[] output){
+        Input = new DenseVector(input);
+        Output = new DenseVector(output);
+    }
     public Vector Input{get;set;}
     public Vector Output{get;set;}
+
+    public IData Clone()
+    {
+        return new Data((Vector)Input.Clone(),(Vector)Output.Clone());
+    }
+
+    public IData Divide(float scalar)
+    {
+        return new Data(){
+        Input = (Vector)Input.Divide(scalar),
+        Output = (Vector)Output.Divide(scalar)
+        };
+    }
 }
 
 public class DataSet
@@ -73,8 +107,9 @@ public class DataLearning
     /// <returns>
     /// Diffused vector which corresponds to 'average' of local data
     /// </returns>
-    public Vector Diffuse(DataSet data, Vector input, Func<IData,Vector>? getInput = null, Func<IData,Vector>? getOutput = null)
+    public Vector Diffuse(DataSet data, Vector input, Func<IData,Vector>? getInput = null, Func<IData,Vector>? getOutput = null, Func<Vector,Vector,float>? inputDistance = null)
     {
+        inputDistance ??= Distance;
         getInput ??= x=>x.Input;
         getOutput ??= x=>x.Output;
         var outputLength = getOutput(data.Data.First()).Count;
@@ -85,7 +120,7 @@ public class DataLearning
         for (int i = 0; i < data.Data.Count; i++)
         {
             var dt = data.Data[i];
-            distSquared = MathF.Pow(Distance(input, getInput(dt)), DiffusionCoefficient);
+            distSquared = MathF.Pow(inputDistance(input, getInput(dt)), DiffusionCoefficient);
             distSquared = Math.Max(distSquared, DiffusionTheta);
             coeff = ActivationFunction(distSquared);
             addedCoeff += coeff;
@@ -93,6 +128,36 @@ public class DataLearning
         }
         if (addedCoeff < DiffusionTheta) addedCoeff = 1;
         averageOutputData = (Vector)averageOutputData.Divide(addedCoeff);
+        return averageOutputData;
+    }
+    /// <summary>
+    /// Diffuses <paramref name="data"/> on <paramref name="input"/> vector
+    /// </summary>
+    /// <returns>
+    /// Diffused vector which corresponds to 'average' of local data
+    /// </returns>
+    public IData Diffuse(DataSet data, IData input,Func<IData,IData,float>? distance = null)
+    {
+        distance ??= (x,y)=> Distance(x.Input,y.Input);
+
+        IData averageOutputData = new Data(){Input = (Vector)input.Input.Clone(), Output = (Vector)input.Output.Clone()};
+        averageOutputData.Input.Clear();
+        averageOutputData.Output.Clear();
+        
+        float addedCoeff = 0;
+        float coeff;
+        float distSquared;
+        for (int i = 0; i < data.Data.Count; i++)
+        {
+            var dt = data.Data[i];
+            distSquared = MathF.Pow(distance(input, dt), DiffusionCoefficient);
+            distSquared = Math.Max(distSquared, DiffusionTheta);
+            coeff = ActivationFunction(distSquared);
+            addedCoeff += coeff;
+            averageOutputData = (averageOutputData + dt * coeff);
+        }
+        if (addedCoeff < DiffusionTheta) addedCoeff = 1;
+        averageOutputData = averageOutputData.Divide(addedCoeff);
         return averageOutputData;
     }
 
@@ -111,7 +176,7 @@ public class DataLearning
             var output = new float[dataSet.OutputVectorLength];
             Array.Fill(input, 0.5f);
             Array.Fill(output, 0.5f);
-            Approximation.Data.Add(new Data() { Input = new DenseVector(input), Output = new DenseVector(output) });
+            Approximation.Data.Add(new Data(input,output));
         }
         DistributeData(Approximation, CoordinatesScale, CoordinatesShift);
         return Approximation;
