@@ -79,6 +79,16 @@ public class Examples
         }
         return normalizer;
     }
+    public static void Normalize(Vector v, Vector normalizer){
+        for(int i = 0;i<v.Count;i++){
+            if(v[i]>-1)
+                v[i]/=normalizer[i];
+        }
+    }
+    public static void Normalize(IEnumerable<Vector> vectors, Vector normalizer){
+        foreach(var v in vectors)
+            Normalize(v,normalizer);
+    }
     public static void Modify(Vector[] data, Func<Vector, Vector> modification)
     {
         for (int i = 0; i < data.Length; i++)
@@ -100,16 +110,44 @@ public class Examples
         adaptiveDataSet.DataLearning.DiffusionTheta = diffusionTheta;
         var watch = new Stopwatch();
         watch.Start();
-        foreach(var t in trainData)
+        var trainOrder = trainData.Select(data=>new{Data = data,MissingColumns=data.Count(x=>x<-1)}).OrderBy(x=>x.MissingColumns);
+        foreach(var element in trainOrder)
         {
-            var d = new Data() { Input = input(t), Output = output(t) };
+            var t = element.Data;
+            IData d = new Data() { Input = input(t), Output = output(t) };
+            if(element.MissingColumns>0){
+                d = adaptiveDataSet.Restore(d);
+            }
             adaptiveDataSet.AddByMergingWithClosest(d);
         };
         System.Console.WriteLine($"Added data in {watch.ElapsedMilliseconds} ms");
         ComputeError(testData, adaptiveDataSet, v => new() { Input = input(v), Output = output(v) });
         System.Console.WriteLine("-------------");
     }
+    public static void Example1(){
+        var file = "possum.csv";
+        System.Console.WriteLine(file);
+        var data = LoadCsv(file,(data,index)=>{
+            if(data=="Vic") return 1;
+            if(data=="other") return 0;
+            if(data=="f") return 1;
+            if(data=="m") return 0;
+            if(data=="NA") return -2;
+            return float.Parse(data);
+        })
+        .Select(x=>(Vector)x.SubVector(1,13))
+        .ToArray();
+        var normalizer = GetNormalizer(data);
+        Normalize(data,normalizer);
+        Shuffle(Random.Shared,data);
+        
+        var train = data[20..];
+        var test = data[..20];
 
+        var input = (Vector v)=>(Vector)v.SubVector(0,11);
+        var output = (Vector v)=>(Vector)v.SubVector(11,2);
+        Run(train,test,input,output,30);
+    }
     public static void Example3()
     {
         var file = "stats.csv";
@@ -125,10 +163,11 @@ public class Examples
              return race[x];
          };
         var data = LoadCsv(file, toData).ToArray();
+        var normalizer = GetNormalizer(data);
+        Normalize(data,normalizer);
         Shuffle(new Random(), data);
 
-        var normalizer = GetNormalizer(data);
-        var input = (Vector v) => (Vector)v.PointwiseDivide(normalizer).SubVector(0, 7);
+        var input = (Vector v) => (Vector)v.SubVector(0, 7);
         var output = (Vector v) =>
         {
             var vec = new SparseVector(races);
@@ -155,12 +194,12 @@ public class Examples
         Shuffle(new Random(), data);
 
         var normalizer = GetNormalizer(data);
-
+        Normalize(data,normalizer);
         var test = data[..100];
         var train = data[100..];
 
-        var input = (Vector v) => (Vector)v.PointwiseDivide(normalizer).SubVector(1, 8);
-        var output = (Vector v) => (Vector)v.PointwiseDivide(normalizer).SubVector(0, 1);
+        var input = (Vector v) => (Vector)v.SubVector(1, 8);
+        var output = (Vector v) => (Vector)v.SubVector(0, 1);
 
         Run(train,test,input,output,500);
 

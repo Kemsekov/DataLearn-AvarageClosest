@@ -54,18 +54,6 @@ public class AdaptiveDataSet
             throw new ArgumentException("There is no data in dataset");
         return (closest, minId);
     }
-    (IData data, int id) GetRandom(Random? rand = null)
-    {
-        var id = GetRandomId(rand);
-        return (DataSet.Data[id], id);
-    }
-    int GetRandomId(Random? rand = null)
-    {
-        rand ??= Random.Shared;
-        var count = DataSet.Data.Count;
-        var id = rand.Next(count);
-        return id;
-    }
     /// <summary>
     /// Restores input vector with missing values. <br/>
     /// Value is missing it is less than -1 <br/>
