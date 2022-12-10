@@ -152,7 +152,6 @@ public class Examples
             if(data=="NA") return -2;
             return float.Parse(data);
         })
-        .Select(x=>(Vector)x.SubVector(1,13))
         .ToArray();
         var normalizer = GetNormalizer(data);
         Normalize(data,normalizer);
@@ -161,9 +160,9 @@ public class Examples
         var train = data[20..];
         var test = data[..20];
 
-        var input = (Vector v)=>(Vector)v.SubVector(0,11);
-        var output = (Vector v)=>(Vector)v.SubVector(11,2);
-        Run(train,test,input,output,40,restoreMissingValues:false);
+        var input = (Vector v)=>(Vector)v.SubVector(0,12);
+        var output = (Vector v)=>(Vector)v.SubVector(12,1);
+        Run(train,test,input,output,100,restoreMissingValues:false);
     }
     public static void Example3()
     {
