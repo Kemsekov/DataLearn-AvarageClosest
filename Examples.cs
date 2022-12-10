@@ -67,37 +67,53 @@ public class Examples
         }
     }
 
-    public static Vector GetNormalizer(IEnumerable<Vector> data)
+    public static (Vector MinVector, Vector Difference) GetNormalizer(IEnumerable<Vector> data)
     {
-        var normalizer = new DenseVector(new float[data.First().Count]);
+        var maxVector = new DenseVector(new float[data.First().Count]);
+        var minVector = new DenseVector(new float[data.First().Count]);
+        Array.Fill(minVector.AsArray(),float.MaxValue);
         foreach (var d in data)
         {
             for (int b = 0; b < d.Count; b++)
             {
-                normalizer[b] = Math.Max(normalizer[b], Math.Abs(d[b]));
+                var value = d[b];
+                if(value<-1) continue;
+                value = Math.Abs(value);
+                maxVector[b] = Math.Max(maxVector[b], value);
+                minVector[b] = Math.Min(minVector[b], value);
             }
         }
-        return normalizer;
+        return (minVector,maxVector-minVector);
     }
-    public static void Normalize(Vector v, Vector normalizer){
+
+    public static void Normalize(Vector v, (Vector MinVector, Vector Difference) normalizer){
         for(int i = 0;i<v.Count;i++){
-            if(v[i]>-1)
-                v[i]/=normalizer[i];
+            if(v[i]>-1){
+                v[i]-=normalizer.MinVector[i];
+                v[i]/=normalizer.Difference[i];
+            }
         }
     }
-    public static void Normalize(IEnumerable<Vector> vectors, Vector normalizer){
+    public static void Normalize(IEnumerable<Vector> vectors, (Vector MinVector,Vector Difference) normalizer){
         foreach(var v in vectors)
             Normalize(v,normalizer);
     }
-    public static void Modify(Vector[] data, Func<Vector, Vector> modification)
-    {
-        for (int i = 0; i < data.Length; i++)
-            data[i] = modification(data[i]);
+
+    public static void RestoreToOriginal(Vector vec, (Vector MinVector,Vector Difference) normalizer){
+        for(int i = 0;i<vec.Count;i++){
+            if(vec[i]>-1){
+                vec[i]*=normalizer.Difference[i];
+                vec[i]+=normalizer.MinVector[i];
+            }
+        }
     }
-
-    public static void Run(Vector[] trainData, Vector[] testData, Func<Vector, Vector> input, Func<Vector, Vector> output,int adaptiveDataSetLength, float diffusionTheta = 0.001f, float diffusionCoefficient = 2)
+    public static void RestoreToOriginal(IEnumerable<Vector> vec, (Vector MinVector,Vector Difference) normalizer){
+        foreach(var c in vec){
+            RestoreToOriginal(c,normalizer);
+        }
+    }
+    public static AdaptiveDataSet Run(Vector[] trainData, Vector[] testData, Func<Vector, Vector> input, Func<Vector, Vector> output,int adaptiveDataSetLength, float diffusionTheta = 0.001f, float diffusionCoefficient = 2, bool restoreMissingValues = false)
     {
-
         var normalizer = GetNormalizer(trainData);
         var inputLength = input(trainData[0]).Count;
         var outputLength = output(trainData[0]).Count;
@@ -115,7 +131,7 @@ public class Examples
         {
             var t = element.Data;
             IData d = new Data() { Input = input(t), Output = output(t) };
-            if(element.MissingColumns>0){
+            if(restoreMissingValues && element.MissingColumns>0){
                 d = adaptiveDataSet.Restore(d);
             }
             adaptiveDataSet.AddByMergingWithClosest(d);
@@ -123,6 +139,7 @@ public class Examples
         System.Console.WriteLine($"Added data in {watch.ElapsedMilliseconds} ms");
         ComputeError(testData, adaptiveDataSet, v => new() { Input = input(v), Output = output(v) });
         System.Console.WriteLine("-------------");
+        return adaptiveDataSet;
     }
     public static void Example1(){
         var file = "possum.csv";
@@ -146,7 +163,7 @@ public class Examples
 
         var input = (Vector v)=>(Vector)v.SubVector(0,11);
         var output = (Vector v)=>(Vector)v.SubVector(11,2);
-        Run(train,test,input,output,30);
+        Run(train,test,input,output,30,restoreMissingValues:false);
     }
     public static void Example3()
     {
@@ -188,7 +205,7 @@ public class Examples
             {
                 if (x != "")
                     return float.Parse(x);
-                return 0;
+                return -2;
             };
         var data = LoadCsv(file, toData).ToArray();
         Shuffle(new Random(), data);
@@ -201,8 +218,30 @@ public class Examples
         var input = (Vector v) => (Vector)v.SubVector(1, 8);
         var output = (Vector v) => (Vector)v.SubVector(0, 1);
 
-        Run(train,test,input,output,500);
+        Run(train,test,input,output,500,restoreMissingValues:false);
 
+    }
+    public static void Example4(){
+        var file = "kc_house_data.csv";
+        System.Console.WriteLine(file);
+        var data = LoadCsv(file,(data,index)=>{
+            var value = float.Parse(data);
+            if(index==9 && value==0) return -2;
+            if(index==7 && value==0) return -2;
+            return MathF.Abs(value);
+        })
+        .Take(10000)
+        .ToArray();
+        var normalizer = GetNormalizer(data);
+        Normalize(data,normalizer);
+        Shuffle(Random.Shared,data);
+        var test = data[..1000];
+        var train = data[1000..];
+        var input = (Vector v)=>(Vector)v.SubVector(0,15);
+        // var output = (Vector v)=>(Vector)v.SubVector(7,1);
+        var output = (Vector v)=>(Vector)v.SubVector(15,2);
+        var result = Run(train,test,input,output,1000,0.000001f,6,restoreMissingValues:false);
+        
     }
     public static void ComputeError(Vector[] test, AdaptiveDataSet dataSet, Func<Vector, Data> getData)
     {

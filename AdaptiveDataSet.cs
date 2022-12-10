@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using MathNet.Numerics.LinearAlgebra.Single;
 
@@ -17,22 +18,18 @@ public class AdaptiveDataSet
     public int InputVectorLength => DataSet.InputVectorLength;
     public int OutputVectorLength => DataSet.OutputVectorLength;
     /// <summary>
-    /// Function that used to calculate distance between two data elements.
+    /// Function that used to calculate distance between two data elements. Used for adding new elements.
     /// </summary>
     public Func<IData, IData, float> Distance { get; set; }
     public AdaptiveDataSet(DataSet dataSet, DataLearning dataLearning, int maxElements)
     {
-        Distance = (a, b) => ((float)(a.Input - b.Input).L2Norm());
+        Distance = (a, b) => DistanceOnMissingValues(a.Input,b.Input);
         this.DataSet = dataSet;
         this.MaxElements = maxElements;
         this.DataLearning = dataLearning;
     }
-    public AdaptiveDataSet(int inputVectorLength, int outputVectorLength, int maxElements)
+    public AdaptiveDataSet(int inputVectorLength, int outputVectorLength, int maxElements) : this(new(inputVectorLength,outputVectorLength),new DataLearning(),maxElements)
     {
-        Distance = (a, b) => ((float)(a.Input - b.Input).L2Norm());
-        this.DataSet = new DataSet(inputVectorLength, outputVectorLength);
-        this.MaxElements = maxElements;
-        this.DataLearning = new DataLearning();
     }
     (IData data, int id) GetClosest(IData element, Func<IData, IData, float> distance)
     {
@@ -60,33 +57,39 @@ public class AdaptiveDataSet
     /// For example (1,0.5,0.3,-2,-2,0.2) is a vector where values with index 3 and 4 are missing <br/>
     /// And when restored only missing values will be filled
     /// </summary>
-    /// <returns>Restored vector</returns>
+    /// <returns>Restored input vector</returns>
     public Vector Restore(Vector input)
     {
         var length = input.Count;
-        var result = DataLearning.Diffuse(DataSet, input, getOutput: x => x.Input, inputDistance: (x, y) =>
-        {
-            float res = 0;
-            float holder = 0;
-            for (int i = 0; i < length; i++)
-            {
-                if (input[i] < -1) continue;
-                holder = (x[i] - y[i]);
-                res += holder * holder;
-            }
-            return MathF.Sqrt(res);
-        });
+        var result = DataLearning.Diffuse(DataSet, input, getOutput: x => x.Input, inputDistance: DistanceOnMissingValues);
         foreach (var e in input.Select((value, index) => (value, index)).Where(x => x.value > -1))
         {
             result[e.index] = e.value;
         }
         return result;
     }
+    float DistanceOnMissingValues(Vector v1, Vector v2)
+    {
+        var len = v1.Count;
+        float res = 0f;
+        float holder = 0f;
+        for (int i = 0; i < len; i++)
+        {
+            if (v1[i] < -1 || v2[i] < -1) continue;
+            holder = v1[i] - v2[i];
+            res += holder * holder;
+        }
+        return MathF.Sqrt(res);
+    }
     public Vector Predict(Vector input)
     {
-        return DataLearning.Diffuse(DataSet, input);
+        return PredictWithMissingValues(input);
     }
-
+    Vector PredictWithMissingValues(Vector input)
+    {
+        var len = input.Count;
+        return DataLearning.Diffuse(DataSet, input, inputDistance: DistanceOnMissingValues);
+    }
     /// <summary>
     /// Restores missing data input/output values.<br/>
     /// Value is missing it is less than -1 <br/>
@@ -98,15 +101,17 @@ public class AdaptiveDataSet
     {
         var inputLength = dataWithMissingValues.Input.Count;
         var outputLength = dataWithMissingValues.Output.Count;
-        
+
         var missingInput = new bool[inputLength];
         var missingOutput = new bool[outputLength];
 
-        for(int i = 0;i<missingInput.Length;i++){
-            missingInput[i] = dataWithMissingValues.Input[i]<-1;
+        for (int i = 0; i < missingInput.Length; i++)
+        {
+            missingInput[i] = dataWithMissingValues.Input[i] < -1;
         }
-        for(int i = 0;i<missingOutput.Length;i++){
-            missingOutput[i] = dataWithMissingValues.Output[i]<-1;
+        for (int i = 0; i < missingOutput.Length; i++)
+        {
+            missingOutput[i] = dataWithMissingValues.Output[i] < -1;
         }
 
         var distance = (IData d1, IData d2) =>
@@ -177,18 +182,14 @@ public class AdaptiveDataSet
             var data = getData(t);
             var input = data.Input;
             var actual = data.Output;
-
             var prediction = Predict(input);
 
             var diff = (prediction - actual);
-  
-            lock (this)
-            {
-                if (maxDifference.PointwiseAbs().Sum() < diff.PointwiseAbs().Sum())
-                    maxDifference = (Vector)diff;
-                difference = (Vector)(difference + diff);
-                absDifference = (Vector)(absDifference + diff.PointwiseAbs());
-            }
+
+            if (maxDifference.PointwiseAbs().Sum() < diff.PointwiseAbs().Sum())
+                maxDifference = (Vector)diff;
+            difference = (Vector)(difference + diff);
+            absDifference = (Vector)(absDifference + diff.PointwiseAbs());
         };
         difference = (Vector)difference.Divide(test.Count());
         absDifference = (Vector)absDifference.Divide(test.Count());
@@ -202,6 +203,7 @@ public class AdaptiveDataSet
         var missingValuesError = 0f;
         foreach (var t in test)
         {
+            if (t.Count(x => x < -1) > 0) continue;
             var input = getData(t).Input;
             var inputWithMissingValues = (Vector)input.Clone();
             input.Map(x =>
