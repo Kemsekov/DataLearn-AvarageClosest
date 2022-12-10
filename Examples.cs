@@ -163,7 +163,7 @@ public class Examples
 
         var input = (Vector v)=>(Vector)v.SubVector(0,11);
         var output = (Vector v)=>(Vector)v.SubVector(11,2);
-        Run(train,test,input,output,30,restoreMissingValues:false);
+        Run(train,test,input,output,40,restoreMissingValues:false);
     }
     public static void Example3()
     {
@@ -240,7 +240,7 @@ public class Examples
         var input = (Vector v)=>(Vector)v.SubVector(0,15);
         // var output = (Vector v)=>(Vector)v.SubVector(7,1);
         var output = (Vector v)=>(Vector)v.SubVector(15,2);
-        var result = Run(train,test,input,output,1000,0.000001f,6,restoreMissingValues:false);
+        var result = Run(train,test,input,output,500,0.000001f,6,restoreMissingValues:false);
         
     }
     public static void ComputeError(Vector[] test, AdaptiveDataSet dataSet, Func<Vector, Data> getData)
