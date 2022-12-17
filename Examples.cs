@@ -66,7 +66,6 @@ public class Examples
             yield return new DenseVector(row);
         }
     }
-
     public static (Vector MinVector, Vector Difference) GetNormalizer(IEnumerable<Vector> data)
     {
         var maxVector = new DenseVector(new float[data.First().Count]);
@@ -85,7 +84,6 @@ public class Examples
         }
         return (minVector,maxVector-minVector);
     }
-
     public static void Normalize(Vector v, (Vector MinVector, Vector Difference) normalizer){
         for(int i = 0;i<v.Count;i++){
             if(v[i]>-1){
@@ -98,7 +96,6 @@ public class Examples
         foreach(var v in vectors)
             Normalize(v,normalizer);
     }
-
     public static void RestoreToOriginal(Vector vec, (Vector MinVector,Vector Difference) normalizer){
         for(int i = 0;i<vec.Count;i++){
             if(vec[i]>-1){
@@ -142,7 +139,7 @@ public class Examples
         return adaptiveDataSet;
     }
     public static void Example1(){
-        var file = "possum.csv";
+        var file = "datasets/possum.csv";
         System.Console.WriteLine(file);
         var data = LoadCsv(file,(data,index)=>{
             if(data=="Vic") return 1;
@@ -166,7 +163,7 @@ public class Examples
     }
     public static void Example3()
     {
-        var file = "stats.csv";
+        var file = "datasets/stats.csv";
         System.Console.WriteLine(file);
         var race = new Dictionary<string, float>();
         int races = 0;
@@ -197,7 +194,7 @@ public class Examples
     }
     public static void Example2()
     {
-        var file = "concrete_data.csv";
+        var file = "datasets/concrete_data.csv";
         System.Console.WriteLine(file);
         var toData =
         (string x) =>
@@ -221,7 +218,7 @@ public class Examples
 
     }
     public static void Example4(){
-        var file = "kc_house_data.csv";
+        var file = "datasets/kc_house_data.csv";
         System.Console.WriteLine(file);
         var data = LoadCsv(file,(data,index)=>{
             var value = float.Parse(data);
@@ -244,7 +241,6 @@ public class Examples
     }
     public static void ComputeError(Vector[] test, AdaptiveDataSet dataSet, Func<Vector, Data> getData)
     {
-
         var watch = new Stopwatch();
         watch.Start();
         var result = dataSet.ComputePredictionError(test, getData);

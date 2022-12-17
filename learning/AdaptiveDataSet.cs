@@ -36,17 +36,18 @@ public class AdaptiveDataSet
         int minId = 0;
         float minDist = float.MaxValue;
         IData? closest = null;
-        for (int i = 0; i < DataSet.Data.Count; i++)
+        Parallel.For(0,DataSet.Data.Count,i=>
         {
             var x = DataSet.Data[i];
             var dist = Distance(x, element);
+            lock(DataSet)
             if (dist < minDist)
             {
                 minId = i;
                 minDist = dist;
                 closest = x;
             }
-        }
+        });
         if (closest is null)
             throw new ArgumentException("There is no data in dataset");
         return (closest, minId);
