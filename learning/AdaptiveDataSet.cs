@@ -16,19 +16,18 @@ public class AdaptiveDataSet
     public int MaxElements { get; }
     public DataLearning DataLearning { get; }
     public int InputVectorLength => DataSet.InputVectorLength;
-    public int OutputVectorLength => DataSet.OutputVectorLength;
     /// <summary>
     /// Function that used to calculate distance between two data elements. Used for adding new elements.
     /// </summary>
     public Func<IData, IData, float> Distance { get; set; }
     public AdaptiveDataSet(DataSet dataSet, DataLearning dataLearning, int maxElements)
     {
-        Distance = (a, b) => DistanceOnMissingValues(a.Input,b.Input);
+        this.Distance = (x1,x2)=>(float)(x1.Input-x2.Input).L2Norm();
         this.DataSet = dataSet;
         this.MaxElements = maxElements;
         this.DataLearning = dataLearning;
     }
-    public AdaptiveDataSet(int inputVectorLength, int outputVectorLength, int maxElements) : this(new(inputVectorLength,outputVectorLength),new DataLearning(),maxElements)
+    public AdaptiveDataSet(int inputVectorLength, int maxElements) : this(new(inputVectorLength),new DataLearning(),maxElements)
     {
     }
     (IData data, int id) GetClosest(IData element, Func<IData, IData, float> distance)
@@ -53,107 +52,36 @@ public class AdaptiveDataSet
         return (closest, minId);
     }
     /// <summary>
-    /// Restores input vector with missing values. <br/>
-    /// Value is missing it is less than -1 <br/>
+    /// Restores input vector with missing values by predicting them <br/>
+    /// Value is missing if it is less than -1 <br/>
     /// For example (1,0.5,0.3,-2,-2,0.2) is a vector where values with index 3 and 4 are missing <br/>
-    /// And when restored only missing values will be filled
+    /// And when restored only missing values will be filled by prediction
     /// </summary>
     /// <returns>Restored input vector</returns>
-    public Vector Restore(Vector input)
+    public Vector Predict(Vector input)
     {
-        var length = input.Count;
-        var result = DataLearning.Diffuse(DataSet, input, getOutput: x => x.Input, inputDistance: DistanceOnMissingValues);
-        foreach (var e in input.Select((value, index) => (value, index)).Where(x => x.value > -1))
+        var result = DataLearning.Diffuse(DataSet, input);
+        foreach (var e in input.Select((value, index) => (value, index)).Where(x => x.value >= -1))
         {
             result[e.index] = e.value;
         }
         return result;
     }
-    float DistanceOnMissingValues(Vector v1, Vector v2)
-    {
-        var len = v1.Count;
-        float res = 0f;
-        float holder = 0f;
-        for (int i = 0; i < len; i++)
-        {
-            if (v1[i] < -1 || v2[i] < -1) continue;
-            holder = v1[i] - v2[i];
-            res += holder * holder;
-        }
-        return MathF.Sqrt(res);
-    }
-    public Vector Predict(Vector input)
-    {
-        return PredictWithMissingValues(input);
-    }
-    Vector PredictWithMissingValues(Vector input)
-    {
-        var len = input.Count;
-        return DataLearning.Diffuse(DataSet, input, inputDistance: DistanceOnMissingValues);
-    }
     /// <summary>
-    /// Restores missing data input/output values.<br/>
-    /// Value is missing it is less than -1 <br/>
-    /// For example (1,0.5,0.3,-2,-2,0.2) is a vector where values with index 3 and 4 are missing <br/>
-    /// And when restored only missing values will be filled
+    /// Computes 'pure' prediction for input. <br/>
+    /// In such case not only missing values will be filled, but returning value is what
+    /// model thinks should be at the exact position given, so this method
+    /// can be used to find anomaly among data
     /// </summary>
-    /// <returns>Restored data</returns>
-    public IData Restore(IData dataWithMissingValues)
+    /// <returns>
+    /// Model pure prediction. 
+    /// When input is good and model is well-fitted for it, result will not much differ from given
+    /// input(except for all missing values will be restored by prediction). <br/>
+    /// But when given input is really out of what model predicts it will produce something completely different.
+    /// </returns>
+    public Vector PurePrediction(Vector input)
     {
-        var inputLength = dataWithMissingValues.Input.Count;
-        var outputLength = dataWithMissingValues.Output.Count;
-
-        var missingInput = new bool[inputLength];
-        var missingOutput = new bool[outputLength];
-
-        for (int i = 0; i < missingInput.Length; i++)
-        {
-            missingInput[i] = dataWithMissingValues.Input[i] < -1;
-        }
-        for (int i = 0; i < missingOutput.Length; i++)
-        {
-            missingOutput[i] = dataWithMissingValues.Output[i] < -1;
-        }
-
-        var distance = (IData d1, IData d2) =>
-        {
-            var res = 0f;
-            var holder = 0f;
-            for (int i = 0; i < inputLength; i++)
-            {
-                if (missingInput[i]) continue;
-                holder = d1.Input[i] - d2.Input[i];
-                res += holder * holder;
-            }
-            for (int i = 0; i < outputLength; i++)
-            {
-                if (missingOutput[i]) continue;
-                holder = d1.Output[i] - d2.Output[i];
-                res += holder * holder;
-            }
-            return MathF.Sqrt(res);
-        };
-        var result = DataLearning.Diffuse(DataSet, dataWithMissingValues, distance);
-        for (int i = 0; i < inputLength; i++)
-        {
-            if (missingInput[i]) continue;
-            result.Input[i] = dataWithMissingValues.Input[i];
-        }
-        for (int i = 0; i < outputLength; i++)
-        {
-            if (missingOutput[i]) continue;
-            result.Output[i] = dataWithMissingValues.Output[i];
-        }
-        return result;
-    }
-
-    /// <summary>
-    /// Merges <see langword="element.Output"/> vector with data prediction on <see langword="element.Input"/> vector
-    /// </summary>
-    public void MergeWithPrediction(IData element)
-    {
-        var prediction = DataLearning.Diffuse(DataSet, element.Input);
-        element.Output = (Vector)(prediction + element.Output).Divide(2);
+        return DataLearning.Diffuse(DataSet, input);
     }
     /// <summary>
     /// For given element, finds another closest by input vector element
@@ -169,23 +97,48 @@ public class AdaptiveDataSet
         }
         var toReplace = GetClosest(element, Distance);
         element.Input = (Vector)(element.Input + toReplace.data.Input).Divide(2);
-        element.Output = (Vector)(element.Output + toReplace.data.Output).Divide(2);
 
         DataSet.Data[toReplace.id] = element;
     }
-    public (float error, float absError, float maxError) ComputePredictionError(Vector[] test, Func<Vector, Data> getData)
+    Vector CreateMissingValues(Vector vec, float percentOfMissingValues = 0.2f){
+        if(vec.Any(x=>x<-1)) return vec;
+        var r = new Random();
+        var res = vec.Clone();
+        for(int i = 0;i<vec.Count;i++){
+            if(r.NextSingle()<percentOfMissingValues)
+                res[i] = -2;
+        }
+        return (Vector)res;
+    }
+    /// <summary>
+    /// Computes model prediction error
+    /// </summary>
+    /// <param name="test">Test data</param>
+    /// <param name="getInput">How to get input from data. Note that input must contain missing values(less than -1) for model to do anything useful with it</param>
+    /// <returns></returns>
+    public TestPrediction ComputePredictionError(Vector[] test, Func<Vector,IData> getInput)
     {
-        Vector difference = new DenseVector(new float[OutputVectorLength]);
-        Vector absDifference = new DenseVector(new float[OutputVectorLength]);
-        Vector maxDifference = new DenseVector(new float[OutputVectorLength]);
+        Vector difference = new DenseVector(new float[InputVectorLength]);
+        Vector absDifference = new DenseVector(new float[InputVectorLength]);
+        Vector maxDifference = new DenseVector(new float[InputVectorLength]);
         foreach (var t in test)
         {
-            var data = getData(t);
-            var input = data.Input;
-            var actual = data.Output;
-            var prediction = Predict(input);
+            var actual = t;
+            var input = getInput(actual);
 
-            var diff = (prediction - actual);
+            var prediction = Predict(input.Input);
+
+            //because some of test data can have missing values itself
+            //we cannot measure difference between missing values so
+            //any prediction on these missing values is invalid
+            //and while computing difference we just ignore them
+            var diff = actual.Clone();
+            for(int i = 0;i<diff.Count;i++){
+                if(actual[i]<-1)
+                    diff[i] = 0;
+                else
+                    diff[i] = actual[i]-prediction[i];
+            }
 
             if (maxDifference.PointwiseAbs().Sum() < diff.PointwiseAbs().Sum())
                 maxDifference = (Vector)diff;
@@ -194,18 +147,15 @@ public class AdaptiveDataSet
         };
         difference = (Vector)difference.Divide(test.Count());
         absDifference = (Vector)absDifference.Divide(test.Count());
-        var absError = absDifference.Sum();
-        var error = difference.PointwiseAbs().Sum();
-        var maxError = maxDifference.PointwiseAbs().Sum();
-        return (error, absError, maxError);
+        return new(difference,absDifference,maxDifference);
     }
-    public float ComputeRestoreError(Vector[] test, Func<Vector, Data> getData, float percentOfMissingValues = 0.2f)
+    public float ComputePurePredictionError(Vector[] test, float percentOfMissingValues = 0.2f)
     {
         var missingValuesError = 0f;
         foreach (var t in test)
         {
             if (t.Count(x => x < -1) > 0) continue;
-            var input = getData(t).Input;
+            var input = t;
             var inputWithMissingValues = (Vector)input.Clone();
             input.Map(x =>
             {
@@ -213,7 +163,7 @@ public class AdaptiveDataSet
                     return -2;
                 return x;
             }, inputWithMissingValues);
-            var restoredByVector = Restore(inputWithMissingValues);
+            var restoredByVector = PurePrediction(inputWithMissingValues);
             var diff = (input - restoredByVector);
             missingValuesError += ((float)diff.L2Norm());
         }

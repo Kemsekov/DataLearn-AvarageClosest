@@ -17,15 +17,14 @@ using MathNet.Numerics.LinearAlgebra.Single;
 public interface IData
 {
     Vector Input{get;set;}
-    Vector Output{get;set;}
     public static IData operator +(IData left, IData right)
     {
-        return new Data(){Input = (Vector)(left.Input+right.Input),Output=(Vector)(left.Output+right.Output)};
+        return new Data(){Input = (Vector)(left.Input+right.Input)};
     }
 
     public static IData operator *(IData left, float scalar)
     {
-        return new Data(){Input=(Vector)(left.Input*scalar),Output = (Vector)(left.Output*scalar)};
+        return new Data(){Input=(Vector)(left.Input*scalar)};
     }
     IData Divide(float scalar);
     IData Clone();
@@ -33,28 +32,27 @@ public interface IData
 
 public struct Data : IData
 {
-    public Data(Vector input, Vector output)
+    public Data(Vector input)
     {
         Input = input;
-        Output = output;
     }
-    public Data(float[] input, float[] output){
+    public Data(Vector<float> input)
+    {
+        Input = (Vector)input;
+    }
+    public Data(float[] input){
         Input = new DenseVector(input);
-        Output = new DenseVector(output);
     }
     public Vector Input{get;set;}
-    public Vector Output{get;set;}
-
     public IData Clone()
     {
-        return new Data((Vector)Input.Clone(),(Vector)Output.Clone());
+        return new Data((Vector)Input.Clone());
     }
 
     public IData Divide(float scalar)
     {
         return new Data(){
-        Input = (Vector)Input.Divide(scalar),
-        Output = (Vector)Output.Divide(scalar)
+        Input = (Vector)Input.Divide(scalar)
         };
     }
 }
@@ -62,15 +60,12 @@ public struct Data : IData
 public class DataSet
 {
     public int InputVectorLength { get; protected set;}
-    public int OutputVectorLength { get; protected set; }
     public List<IData> Data { get; }
-    public DataSet(int inputVectorLength, int outputVectorLength, List<IData>? data = null)
+    public DataSet(int inputVectorLength, List<IData>? data = null)
     {
         this.InputVectorLength = inputVectorLength;
-        this.OutputVectorLength = outputVectorLength;
         this.Data = data ?? new List<IData>();
     }
-
 }
 
 /// <summary>
@@ -95,25 +90,41 @@ public class DataLearning
     public DataLearning()
     {
     }
-
-    float Distance(Vector n1, Vector n2)
+    /// <summary>
+    /// Computes L2 distance between two vectors on their subvectors.<br/>
+    /// Subvectors is taken in such a way, that if any of two vectors have a missing value at
+    /// given index it will not consider this index while computing distance.<br/>
+    /// For example for vectors <see langword="(1,2,3,-2)"/> and <see langword="(-2,1,5,-4)"/> <br/>
+    /// result will be <see langword="sqrt((2-1)^2+(5-3)^2)"/>
+    /// </summary>
+    public float Distance(Vector n1, Vector n2)
     {
-        return ((float)(n1 - n2).L2Norm());
+        float distance = 0;
+        float holder = 0;
+        var len = Math.Min(n1.Count,n2.Count);
+        for(int i = 0;i<len;i++){
+            if(n1[i]<-1 || n2[i]<-1) continue;
+            holder = n1[i]-n2[i];
+            distance+=holder*holder;
+        }
+        return MathF.Sqrt(distance);
     }
 
     /// <summary>
-    /// Diffuses <paramref name="data"/> on <paramref name="input"/> vector
+    /// Diffuses <paramref name="data"/> on <paramref name="input"/> vector.<br/>
+    /// By default <paramref name="inputDistance"/> does following: <br/>
+    /// Where input vector values less than -1 it is considered missing, and
+    /// would not be used in computing prediction.
     /// </summary>
     /// <returns>
-    /// Diffused vector which corresponds to 'average' of local data
+    /// Diffused vector which corresponds to 'average' of local known(not missing) data
     /// </returns>
-    public Vector Diffuse(DataSet data, Vector input, Func<IData,Vector>? getInput = null, Func<IData,Vector>? getOutput = null, Func<Vector,Vector,float>? inputDistance = null)
+    public Vector Diffuse(DataSet data, Vector input, Func<IData,Vector>? getInput = null, Func<Vector,Vector,float>? inputDistance = null)
     {
         inputDistance ??= Distance;
         getInput ??= x=>x.Input;
-        getOutput ??= x=>x.Output;
-        var outputLength = getOutput(data.Data.First()).Count;
-        Vector averageOutputData = new DenseVector(new float[outputLength]);
+        var inputLength = getInput(data.Data.First()).Count;
+        Vector averageOutputData = new DenseVector(new float[inputLength]);
         float addedCoeff = 0;
         float coeff;
         float distSquared;
@@ -124,40 +135,10 @@ public class DataLearning
             distSquared = Math.Max(distSquared, DiffusionTheta);
             coeff = ActivationFunction(distSquared);
             addedCoeff += coeff;
-            averageOutputData = (Vector)(averageOutputData + getOutput(dt) * coeff);
+            averageOutputData = (Vector)(averageOutputData + dt.Input * coeff);
         }
         if (addedCoeff < DiffusionTheta) addedCoeff = 1;
         averageOutputData = (Vector)averageOutputData.Divide(addedCoeff);
-        return averageOutputData;
-    }
-    /// <summary>
-    /// Diffuses <paramref name="data"/> on <paramref name="input"/> vector
-    /// </summary>
-    /// <returns>
-    /// Diffused vector which corresponds to 'average' of local data
-    /// </returns>
-    public IData Diffuse(DataSet data, IData input,Func<IData,IData,float>? distance = null)
-    {
-        distance ??= (x,y)=> Distance(x.Input,y.Input);
-
-        IData averageOutputData = new Data(){Input = (Vector)input.Input.Clone(), Output = (Vector)input.Output.Clone()};
-        averageOutputData.Input.Clear();
-        averageOutputData.Output.Clear();
-        
-        float addedCoeff = 0;
-        float coeff;
-        float distSquared;
-        for (int i = 0; i < data.Data.Count; i++)
-        {
-            var dt = data.Data[i];
-            distSquared = MathF.Pow(distance(input, dt), DiffusionCoefficient);
-            distSquared = Math.Max(distSquared, DiffusionTheta);
-            coeff = ActivationFunction(distSquared);
-            addedCoeff += coeff;
-            averageOutputData = (averageOutputData + dt * coeff);
-        }
-        if (addedCoeff < DiffusionTheta) addedCoeff = 1;
-        averageOutputData = averageOutputData.Divide(addedCoeff);
         return averageOutputData;
     }
 
@@ -169,14 +150,12 @@ public class DataLearning
     /// <param name="approximationSize">How many dots to create in space?</param>
     public DataSet GetApproximationSet(int approximationSize, DataSet dataSet, float CoordinatesScale, Vector CoordinatesShift)
     {
-        var Approximation = new DataSet(dataSet.InputVectorLength, dataSet.OutputVectorLength, new List<IData>(approximationSize));
+        var Approximation = new DataSet(dataSet.InputVectorLength, new List<IData>(approximationSize));
         for (int i = 0; i < approximationSize; i++)
         {
             var input = new float[dataSet.InputVectorLength];
-            var output = new float[dataSet.OutputVectorLength];
             Array.Fill(input, 0.5f);
-            Array.Fill(output, 0.5f);
-            Approximation.Data.Add(new Data(input,output));
+            Approximation.Data.Add(new Data(input));
         }
         DistributeData(Approximation, CoordinatesScale, CoordinatesShift);
         return Approximation;
@@ -201,7 +180,7 @@ public class DataLearning
         Parallel.For(0, Approximation.Data.Count, (i, _) =>
         {
             var approximation = Approximation.Data[i];
-            approximation.Output = Diffuse(dataSet, approximation.Input);
+            approximation.Input = Diffuse(dataSet, approximation.Input);
             Approximation.Data[i] = approximation;
         });
     }

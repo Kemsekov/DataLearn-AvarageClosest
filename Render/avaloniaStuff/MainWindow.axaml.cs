@@ -28,22 +28,22 @@ public partial class MainWindow : Window
 
     async void RunRenderAfterAppActivation(){
         #pragma warning disable
-        dynamic settings = JObject.Parse(File.ReadAllText("settings.json"));
-        var mode = settings.ModeSelected;
+        // dynamic settings = JObject.Parse(File.ReadAllText("settings.json"));
+        // var mode = settings.ModeSelected;
 
-        while(!IsActive) await Task.Delay(10);
-        Render r = default;
-        if(mode=="2D")
-        r = new Render2D(Canvas);
-        if(mode=="1D")
-        r = new Render1D(Canvas);
-        if(r is null) throw new ArgumentException("Choose 1D or 2D as ModeSelected in settings.json");
-        r.RenderStuff();
-        Task.Run(r.ComputeStuff);
-        this.KeyDown += r.OnKeyDown;
-        this.PointerWheelChanged += r.PointerWheelChanged;
-        // this.PointerPressed += r.PointerPressed;
-        #pragma warning enable
+        // while(!IsActive) await Task.Delay(10);
+        // Render r = default;
+        // if(mode=="2D")
+        // r = new Render2D(Canvas);
+        // if(mode=="1D")
+        // r = new Render1D(Canvas);
+        // if(r is null) throw new ArgumentException("Choose 1D or 2D as ModeSelected in settings.json");
+        // r.RenderStuff();
+        // Task.Run(r.ComputeStuff);
+        // this.KeyDown += r.OnKeyDown;
+        // this.PointerWheelChanged += r.PointerWheelChanged;
+        // // this.PointerPressed += r.PointerPressed;
+        // #pragma warning enable
 
     }
     protected override void OnPointerMoved(PointerEventArgs e)

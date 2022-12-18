@@ -109,13 +109,12 @@ public class Examples
             RestoreToOriginal(c,normalizer);
         }
     }
-    public static AdaptiveDataSet Run(Vector[] trainData, Vector[] testData, Func<Vector, Vector> input, Func<Vector, Vector> output,int adaptiveDataSetLength, float diffusionTheta = 0.001f, float diffusionCoefficient = 2, bool restoreMissingValues = false)
+    public static AdaptiveDataSet Run(Vector[] trainData, Vector[] testData, Func<Vector, IData> getInput,int adaptiveDataSetLength, float diffusionTheta = 0.001f, float diffusionCoefficient = 2, bool restoreMissingValues = false)
     {
         var normalizer = GetNormalizer(trainData);
-        var inputLength = input(trainData[0]).Count;
-        var outputLength = output(trainData[0]).Count;
+        var inputLength = trainData[0].Count;
 
-        var adaptiveDataSet = new AdaptiveDataSet(inputLength, outputLength, adaptiveDataSetLength);
+        var adaptiveDataSet = new AdaptiveDataSet(inputLength, adaptiveDataSetLength);
         
         // adaptiveDataSet.Distance = (x1,x2)=>((float)((x1.Input-x2.Input).L2Norm()+(x1.Output-x2.Output).L2Norm()));
         
@@ -127,14 +126,14 @@ public class Examples
         foreach(var element in trainOrder)
         {
             var t = element.Data;
-            IData d = new Data() { Input = input(t), Output = output(t) };
+            IData d = new Data() { Input = t};
             if(restoreMissingValues && element.MissingColumns>0){
-                d = adaptiveDataSet.Restore(d);
+                d.Input = adaptiveDataSet.PurePrediction(d.Input);
             }
             adaptiveDataSet.AddByMergingWithClosest(d);
         };
         System.Console.WriteLine($"Added data in {watch.ElapsedMilliseconds} ms");
-        ComputeError(testData, adaptiveDataSet, v => new() { Input = input(v), Output = output(v) });
+        ComputeError(testData, adaptiveDataSet, getInput);
         System.Console.WriteLine("-------------");
         return adaptiveDataSet;
     }
@@ -157,9 +156,12 @@ public class Examples
         var train = data[20..];
         var test = data[..20];
 
-        var input = (Vector v)=>(Vector)v.SubVector(0,12);
-        var output = (Vector v)=>(Vector)v.SubVector(12,1);
-        Run(train,test,input,output,100,restoreMissingValues:false);
+        var input = (Vector v)=>{
+            var res = v.Clone();
+            res[12] = -2;
+            return new Data(res) as IData;
+        };
+        Run(train,test,input,100,restoreMissingValues:false);
     }
     public static void Example3()
     {
@@ -175,22 +177,32 @@ public class Examples
                  race[x] = races++;
              return race[x];
          };
-        var data = LoadCsv(file, toData).ToArray();
+        //first 9 elements are values from height to charisma
+        //later N elements are class which this character belongs to
+        var totalRaces = 9;
+        var data = 
+            LoadCsv(file, toData)
+            .Select(x=>{
+                var res = new DenseVector(totalRaces+x.Count-1);
+                res.SetSubVector(0,x.Count-1,x.SubVector(1,x.Count-1));
+                var id = (int)x.First()+x.Count-1;
+                res[id] = 1;
+                return res;
+            })
+            .ToArray();
+        Shuffle(new Random(), data);
         var normalizer = GetNormalizer(data);
         Normalize(data,normalizer);
-        Shuffle(new Random(), data);
 
-        var input = (Vector v) => (Vector)v.SubVector(0, 7);
-        var output = (Vector v) =>
-        {
-            var vec = new SparseVector(races);
-            var id = (int)v.First();
-            vec[id] = 1;
-            return vec;
+        var input = (Vector v) =>{
+            var clone = v.Clone();
+            for(int i = 9;i<v.Count;i++)
+                clone[i] = -2;
+            return new Data(clone) as IData;
         };
         var test = data[..500];
         var train = data[500..];
-        Run(train,test,input,output,1000,0.000000001f,8);
+        Run(train,test,input,1000,0.000000001f,8);
     }
     public static void Example2()
     {
@@ -211,10 +223,13 @@ public class Examples
         var test = data[..100];
         var train = data[100..];
 
-        var input = (Vector v) => (Vector)v.SubVector(1, 8);
-        var output = (Vector v) => (Vector)v.SubVector(0, 1);
+        var input = (Vector v) =>{
+            var clone = v.Clone();
+            clone[0] = -2;
+            return new Data(clone) as IData;
+        };
 
-        Run(train,test,input,output,500,restoreMissingValues:false);
+        Run(train,test,input,500);
 
     }
     public static void Example4(){
@@ -233,25 +248,39 @@ public class Examples
         Shuffle(Random.Shared,data);
         var test = data[..1000];
         var train = data[1000..];
-        var input = (Vector v)=>(Vector)v.SubVector(0,15);
-        // var output = (Vector v)=>(Vector)v.SubVector(7,1);
-        var output = (Vector v)=>(Vector)v.SubVector(15,2);
-        var result = Run(train,test,input,output,500,0.000001f,6,restoreMissingValues:false);
+        var input = (Vector v)=>{
+            var clone = v.Clone();
+            clone[15] = -2;
+            clone[16] = -2;
+            return new Data(clone) as IData;
+        };
+        var result = Run(train,test,input,500,0.000001f,6,restoreMissingValues:false);
         
     }
-    public static void ComputeError(Vector[] test, AdaptiveDataSet dataSet, Func<Vector, Data> getData)
+    public static void ComputeError(Vector[] test, AdaptiveDataSet dataSet, Func<Vector,IData> getInput)
     {
         var watch = new Stopwatch();
         watch.Start();
-        var result = dataSet.ComputePredictionError(test, getData);
+        var result = dataSet.ComputePredictionError(test, getInput);
         var missingValuesPercent = 0.2f;
-        var restoreError = dataSet.ComputeRestoreError(test,getData,missingValuesPercent);
+        var restoreError = dataSet.ComputePurePredictionError(test,missingValuesPercent);
         watch.Stop();
         System.Console.WriteLine("Test size : " + test.Length);
         System.Console.WriteLine("Time to compute error : " + watch.ElapsedMilliseconds + " ms");
-        System.Console.WriteLine("Error is " + result.error);
-        System.Console.WriteLine("Absolute Error is " + result.absError);
-        System.Console.WriteLine("MaxError is " + result.maxError);
+        System.Console.WriteLine("Error is " + result.Error);
+        System.Console.WriteLine("Absolute Error is " + result.AbsError);
+        System.Console.WriteLine("MaxError is " + result.MaxError);
+        System.Console.WriteLine("Absolute error vector:");
+        System.Console.WriteLine("Index\t:\tAbs error");
+        // from this output we can clearly see where what values our model predicts best
+        // and what values predicts worst
+        //index is a value's index we trying to predict
+        //value is a mean absolute error our model has while predicting it
+        for(int i = 0;i<result.AbsDifference.Count;i++){
+            var diff = result.AbsDifference[i];
+            if(diff==0) continue;
+            System.Console.WriteLine($"{i}\t:\t{diff}");
+        }
         System.Console.WriteLine($"Restore error with {missingValuesPercent.ToString("0.00")} missing values is "+restoreError);
     }
 }
