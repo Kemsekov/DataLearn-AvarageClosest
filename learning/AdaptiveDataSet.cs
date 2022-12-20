@@ -22,10 +22,10 @@ public class AdaptiveDataSet
     public Func<IData, IData, float> Distance { get; set; }
     public AdaptiveDataSet(DataSet dataSet, DataLearning dataLearning, int maxElements)
     {
-        this.Distance = (x1,x2)=>(float)(x1.Input-x2.Input).L2Norm();
         this.DataSet = dataSet;
         this.MaxElements = maxElements;
         this.DataLearning = dataLearning;
+        this.Distance = (x1,x2)=>DataLearning.Distance(x1.Input,x2.Input);
     }
     public AdaptiveDataSet(int inputVectorLength, int maxElements) : this(new(inputVectorLength),new DataLearning(),maxElements)
     {

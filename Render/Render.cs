@@ -88,7 +88,7 @@ public abstract class Render
         {
             watch.Restart();
             if (!Pause)
-                lock (AdaptiveDataSet)
+                lock (DataLearning)
                 {
                     AdaptiveDataSet.Diffuse(Approximation,GetInput);
                 }
