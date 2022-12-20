@@ -81,11 +81,11 @@ public class DataLearning
     /// take more average values from all dataset, 
     /// when small <see langword="Diffuse"/> method will consider local values more valuable.
     /// </summary>
-    public float DiffusionTheta = 0.001f;
+    public float DiffusionTheta = 0.00001f;
     /// <summary>
     /// How strong local values is
     /// </summary>
-    public float DiffusionCoefficient = 2;
+    public float DiffusionCoefficient = 4;
 
     public DataLearning()
     {
@@ -148,12 +148,12 @@ public class DataLearning
     /// scaled/shifted by <paramref name="CoordinatesScale"/> and <paramref name="CoordinatesShift"/>
     /// </summary>
     /// <param name="approximationSize">How many dots to create in space?</param>
-    public DataSet GetApproximationSet(int approximationSize, DataSet dataSet, float CoordinatesScale, Vector CoordinatesShift)
+    public DataSet GetApproximationSet(int approximationSize, int InputVectorLength, float CoordinatesScale, Vector CoordinatesShift)
     {
-        var Approximation = new DataSet(dataSet.InputVectorLength, new List<IData>(approximationSize));
+        var Approximation = new DataSet(InputVectorLength, new List<IData>(approximationSize));
         for (int i = 0; i < approximationSize; i++)
         {
-            var input = new float[dataSet.InputVectorLength];
+            var input = new float[InputVectorLength];
             Array.Fill(input, 0.5f);
             Approximation.Data.Add(new Data(input));
         }
@@ -171,20 +171,6 @@ public class DataLearning
     {
         return 1 / (distSquared * distSquared);
     }
-    /// <summary>
-    /// Diffuses <paramref name="dataSet"/> on <paramref name="Approximation"/> dataset.
-    /// </summary>
-    public void Diffuse(DataSet dataSet, DataSet Approximation)
-    {
-        if (dataSet.Data.Count == 0) return;
-        Parallel.For(0, Approximation.Data.Count, (i, _) =>
-        {
-            var approximation = Approximation.Data[i];
-            approximation.Input = Diffuse(dataSet, approximation.Input);
-            Approximation.Data[i] = approximation;
-        });
-    }
-
     /// <summary>
     /// Moves data points from each other to normally fill input vector space
     /// </summary>

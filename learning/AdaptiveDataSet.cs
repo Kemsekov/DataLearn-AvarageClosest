@@ -60,6 +60,7 @@ public class AdaptiveDataSet
     /// <returns>Restored input vector</returns>
     public Vector Predict(Vector input)
     {
+        if(DataSet.Data.Count==0) return input;
         var result = DataLearning.Diffuse(DataSet, input);
         foreach (var e in input.Select((value, index) => (value, index)).Where(x => x.value >= -1))
         {
@@ -133,22 +134,55 @@ public class AdaptiveDataSet
             //any prediction on these missing values is invalid
             //and while computing difference we just ignore them
             var diff = actual.Clone();
-            for(int i = 0;i<diff.Count;i++){
-                if(actual[i]<-1)
+            for (int i = 0; i < diff.Count; i++)
+            {
+                if (actual[i] < -1)
                     diff[i] = 0;
                 else
-                    diff[i] = actual[i]-prediction[i];
+                    diff[i] = actual[i] - prediction[i];
             }
-
             if (maxDifference.PointwiseAbs().Sum() < diff.PointwiseAbs().Sum())
                 maxDifference = (Vector)diff;
             difference = (Vector)(difference + diff);
             absDifference = (Vector)(absDifference + diff.PointwiseAbs());
+            // PrintDiff(diff);
         };
         difference = (Vector)difference.Divide(test.Count());
         absDifference = (Vector)absDifference.Divide(test.Count());
         return new(difference,absDifference,maxDifference);
     }
+    /// <summary>
+    /// Diffuses <paramref name="dataSet"/> on <paramref name="Approximation"/> dataset.
+    /// </summary>
+    public void Diffuse(DataSet Approximation,Func<Vector,Vector> getInput)
+    {
+        if (DataSet.Data.Count == 0) return;
+        Parallel.For(0, Approximation.Data.Count, (i, _) =>
+        {
+            var approximation = Approximation.Data[i];
+            var input = getInput(approximation.Input);
+            approximation.Input = Predict(input);
+            Approximation.Data[i] = approximation;
+        });
+    }
+    /// <summary>
+    /// Pretty prints difference vector
+    /// </summary>
+    /// <param name="diff"></param>
+    static void PrintDiff(Vector<float> diff)
+    {
+        diff.Map(x => x < 0.01 ? 0 : x, diff);
+        bool printed = false;
+        for(int i = 0;i<diff.Count;i++){
+            var d = diff[i];
+            if(d==0) continue;
+            printed = true;
+            System.Console.WriteLine($"{i}\t:\t{d}");
+        }
+        if(printed)
+            System.Console.WriteLine("---------");
+    }
+
     public float ComputePurePredictionError(Vector[] test, float percentOfMissingValues = 0.2f)
     {
         var missingValuesError = 0f;

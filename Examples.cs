@@ -190,6 +190,7 @@ public class Examples
                 return res;
             })
             .ToArray();
+        
         Shuffle(new Random(), data);
         var normalizer = GetNormalizer(data);
         Normalize(data,normalizer);
@@ -202,7 +203,7 @@ public class Examples
         };
         var test = data[..500];
         var train = data[500..];
-        Run(train,test,input,1000,0.000000001f,8);
+        Run(train,test,input,1000,0.0000001f,6);
     }
     public static void Example2()
     {
