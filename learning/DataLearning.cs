@@ -125,6 +125,8 @@ public class DataLearning
         getInput ??= x=>x.Input;
         var inputLength = getInput(data.Data.First()).Count;
         Vector averageOutputData = new DenseVector(new float[inputLength]);
+        Vector buffer = new DenseVector(new float[inputLength]);
+
         float addedCoeff = 0;
         float coeff;
         float distSquared;
@@ -135,7 +137,11 @@ public class DataLearning
             distSquared = Math.Max(distSquared, DiffusionTheta);
             coeff = ActivationFunction(distSquared);
             addedCoeff += coeff;
-            averageOutputData = (Vector)(averageOutputData + dt.Input * coeff);
+            dt.Input.Map(x=>{
+                if(x<-1) return 0;
+                return x*coeff;
+            },buffer);
+            averageOutputData = (Vector)(averageOutputData + buffer);
         }
         if (addedCoeff < DiffusionTheta) addedCoeff = 1;
         averageOutputData = (Vector)averageOutputData.Divide(addedCoeff);

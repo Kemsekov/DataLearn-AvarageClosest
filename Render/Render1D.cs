@@ -27,7 +27,7 @@ public class Render1D : Render
         this.InputVectorLength = 2;
         this.DataSet = new DataSet(InputVectorLength);
         this.DataLearning = new DataLearning();
-        this.AdaptiveDataSet = new AdaptiveDataSet(DataSet,DataLearning,10);
+        this.AdaptiveDataSet = new AdaptiveDataSet(DataSet,DataLearning,20);
         this.Approximation = DataLearning.GetApproximationSet(ApproximationSize,1,1,new DenseVector(new float[1]));
         ExpandApproximationSet();
     }
@@ -52,7 +52,7 @@ public class Render1D : Render
         var pos = e.GetPosition(Canvas);
         var input = new DenseVector(new float[] { (float)pos.X / WindowSize, (float)pos.Y / WindowSize});
         lock (DataLearning){
-            // AdaptiveDataSet.Add(new Data(){Input = input, Output = output});
+            // AdaptiveDataSet.AddByMergingWithClosest(new Data(){Input = input});
             DataSet.Data.Add(new Data(){Input = input});
         }
     }

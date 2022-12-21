@@ -19,7 +19,7 @@ public class AdaptiveDataSet
     /// <summary>
     /// Function that used to calculate distance between two data elements. Used for adding new elements.
     /// </summary>
-    public Func<IData, IData, float> Distance { get; set; }
+    Func<IData, IData, float> Distance { get; set; }
     public AdaptiveDataSet(DataSet dataSet, DataLearning dataLearning, int maxElements)
     {
         this.DataSet = dataSet;
@@ -100,6 +100,18 @@ public class AdaptiveDataSet
         element.Input = (Vector)(element.Input + toReplace.data.Input).Divide(2);
 
         DataSet.Data[toReplace.id] = element;
+    }
+    /// <summary>
+    /// Adds new element by replacing random element
+    /// </summary>
+    public void AddByReplacingRandom(IData element){
+        if (DataSet.Data.Count < MaxElements)
+        {
+            DataSet.Data.Add(element);
+            return;
+        }
+        var toReplace = Random.Shared.Next(DataSet.Data.Count);
+        DataSet.Data[toReplace] = element;
     }
     Vector CreateMissingValues(Vector vec, float percentOfMissingValues = 0.2f){
         if(vec.Any(x=>x<-1)) return vec;
