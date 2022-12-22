@@ -51,6 +51,11 @@ public class AdaptiveDataSet
             throw new ArgumentException("There is no data in dataset");
         return (closest, minId);
     }
+    public Vector PredictOnNClosest(Vector input,int n){
+        if(DataSet.Data.Count==0) return input;
+        var result = DataLearning.DiffuseOnNClosest(DataSet,input,n);
+        return FillMissingValues(input,result);
+    }
     /// <summary>
     /// Restores input vector with missing values by predicting them <br/>
     /// Value is missing if it is less than -1 <br/>
@@ -60,14 +65,20 @@ public class AdaptiveDataSet
     /// <returns>Restored input vector</returns>
     public Vector Predict(Vector input)
     {
-        if(DataSet.Data.Count==0) return input;
+        if (DataSet.Data.Count == 0) return input;
         var result = DataLearning.Diffuse(DataSet, input);
+        return FillMissingValues(input, result);
+    }
+
+    private static Vector FillMissingValues(Vector input, Vector result)
+    {
         foreach (var e in input.Select((value, index) => (value, index)).Where(x => x.value >= -1))
         {
             result[e.index] = e.value;
         }
         return result;
     }
+
     /// <summary>
     /// Computes 'pure' prediction for input. <br/>
     /// In such case not only missing values will be filled, but returning value is what
@@ -166,7 +177,7 @@ public class AdaptiveDataSet
     /// <summary>
     /// Diffuses <paramref name="dataSet"/> on <paramref name="Approximation"/> dataset.
     /// </summary>
-    public void Diffuse(DataSet Approximation,Func<Vector,Vector> getInput)
+    public void Predict(DataSet Approximation,Func<Vector,Vector> getInput)
     {
         if (DataSet.Data.Count == 0) return;
         Parallel.For(0, Approximation.Data.Count, (i, _) =>
@@ -174,6 +185,17 @@ public class AdaptiveDataSet
             var approximation = Approximation.Data[i];
             var input = getInput(approximation.Input);
             approximation.Input = Predict(input);
+            Approximation.Data[i] = approximation;
+        });
+    }
+    public void PredictOnNClosest(DataSet Approximation,Func<Vector,Vector> getInput, int n)
+    {
+        if (DataSet.Data.Count == 0) return;
+        Parallel.For(0, Approximation.Data.Count, (i, _) =>
+        {
+            var approximation = Approximation.Data[i];
+            var input = getInput(approximation.Input);
+            approximation.Input = PredictOnNClosest(input,n);
             Approximation.Data[i] = approximation;
         });
     }

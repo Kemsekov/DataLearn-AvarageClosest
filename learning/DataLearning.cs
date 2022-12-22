@@ -60,8 +60,8 @@ public struct Data : IData
 public class DataSet
 {
     public int InputVectorLength { get; protected set;}
-    public List<IData> Data { get; }
-    public DataSet(int inputVectorLength, List<IData>? data = null)
+    public IList<IData> Data { get; }
+    public DataSet(int inputVectorLength, IList<IData>? data = null)
     {
         this.InputVectorLength = inputVectorLength;
         this.Data = data ?? new List<IData>();
@@ -119,11 +119,9 @@ public class DataLearning
     /// <returns>
     /// Diffused vector which corresponds to 'average' of local known(not missing) data
     /// </returns>
-    public Vector Diffuse(DataSet data, Vector input, Func<IData,Vector>? getInput = null, Func<Vector,Vector,float>? inputDistance = null)
+    public Vector Diffuse(DataSet data, Vector input)
     {
-        inputDistance ??= Distance;
-        getInput ??= x=>x.Input;
-        var inputLength = getInput(data.Data.First()).Count;
+        var inputLength = data.InputVectorLength;
         Vector averageOutputData = new DenseVector(new float[inputLength]);
         Vector buffer = new DenseVector(new float[inputLength]);
 
@@ -133,10 +131,13 @@ public class DataLearning
         for (int i = 0; i < data.Data.Count; i++)
         {
             var dt = data.Data[i];
-            distSquared = MathF.Pow(inputDistance(input, getInput(dt)), DiffusionCoefficient);
+            distSquared = MathF.Pow(Distance(input, dt.Input), DiffusionCoefficient);
             distSquared = Math.Max(distSquared, DiffusionTheta);
             coeff = ActivationFunction(distSquared);
             addedCoeff += coeff;
+            //because data from dataset itself can contain missing values
+            //we need to transform our vector so these values will not
+            //spoil total result
             dt.Input.Map(x=>{
                 if(x<-1) return 0;
                 return x*coeff;
@@ -147,7 +148,11 @@ public class DataLearning
         averageOutputData = (Vector)averageOutputData.Divide(addedCoeff);
         return averageOutputData;
     }
-
+    public Vector DiffuseOnNClosest(DataSet data, Vector input, int n){
+        var inputLength = data.InputVectorLength;
+        var mins = data.Data.FindNMinimal(n,x=>Distance(x.Input,input));
+        return Diffuse(new DataSet(data.InputVectorLength,mins),input);
+    }
     /// <summary>
     /// Returns dataset that corresponds to given <paramref name="dataSet"/>, 
     /// that evenly distributed on n-dimensional(where n is input length) identity cube and 
@@ -183,7 +188,7 @@ public class DataLearning
     public void DistributeData(DataSet dataSet, float CoordinatesScale, Vector CoordinatesShift)
     {
         var InputVectorLength = dataSet.InputVectorLength;
-        var data = System.Runtime.InteropServices.CollectionsMarshal.AsSpan(dataSet.Data);
+        var data = dataSet.Data;
         void normalizeVector(ref DenseVector position, float step)
         {
             for (int k = 0; k < InputVectorLength; k++)
@@ -197,11 +202,11 @@ public class DataLearning
                 }
             }
         }
-        var chunkSize = MathF.Pow(data.Length, 1f / InputVectorLength);
+        var chunkSize = MathF.Pow(data.Count, 1f / InputVectorLength);
         var step = 1f / chunkSize;
         var position = new DenseVector(new float[InputVectorLength]);
 
-        for (int i = 0; i < data.Length; i++)
+        for (int i = 0; i < data.Count; i++)
         {
             data[i].Input = (Vector)position.Clone();
             position[0] += step;
@@ -217,10 +222,10 @@ public class DataLearning
     /// </summary>
     void NormalizeCoordinates(DataSet dataSet, float scaleCoefficient = 1, Vector? shift = null)
     {
-        var data = System.Runtime.InteropServices.CollectionsMarshal.AsSpan(dataSet.Data);
+        var data = dataSet.Data;
         var max = dataSet.Data.Max(x => x.Input.Max());
         shift ??= new DenseVector(new float[dataSet.InputVectorLength]);
-        for (int i = 0; i < data.Length; i++)
+        for (int i = 0; i < data.Count; i++)
         {
             var scaled = data[i].Input.Divide(max) * scaleCoefficient + shift;
             data[i].Input = (Vector)scaled;

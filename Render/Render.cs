@@ -90,7 +90,8 @@ public abstract class Render
             if (!Pause)
                 lock (DataLearning)
                 {
-                    AdaptiveDataSet.Diffuse(Approximation,GetInput);
+                    AdaptiveDataSet.Predict(Approximation,GetInput);
+                    // AdaptiveDataSet.PredictOnNClosest(Approximation,GetInput,10);
                 }
             ComputeTime = watch.ElapsedMilliseconds * 1f / 1000;
             await Task.Delay(computeIntervalMilliseconds);

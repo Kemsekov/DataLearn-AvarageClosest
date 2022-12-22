@@ -17,17 +17,7 @@ public class DataLearnerHelper
 
 public class Examples
 {
-    public static void Shuffle<T>(Random rng, T[] array)
-    {
-        int n = array.Length;
-        while (n > 1)
-        {
-            int k = rng.Next(n--);
-            T temp = array[n];
-            array[n] = array[k];
-            array[k] = temp;
-        }
-    }
+
     public static IEnumerable<Vector> LoadCsv(string path, Func<string, float> toData)
     {
         using var file = File.OpenRead(path);
@@ -151,7 +141,7 @@ public class Examples
         .ToArray();
         var normalizer = GetNormalizer(data);
         Normalize(data,normalizer);
-        Shuffle(Random.Shared,data);
+        data.Shuffle();
         
         var train = data[20..];
         var test = data[..20];
@@ -191,7 +181,7 @@ public class Examples
             })
             .ToArray();
         
-        Shuffle(new Random(), data);
+        data.Shuffle();
         var normalizer = GetNormalizer(data);
         Normalize(data,normalizer);
 
@@ -217,7 +207,7 @@ public class Examples
                 return -2;
             };
         var data = LoadCsv(file, toData).ToArray();
-        Shuffle(new Random(), data);
+        data.Shuffle();
 
         var normalizer = GetNormalizer(data);
         Normalize(data,normalizer);
@@ -246,7 +236,7 @@ public class Examples
         .ToArray();
         var normalizer = GetNormalizer(data);
         Normalize(data,normalizer);
-        Shuffle(Random.Shared,data);
+        data.Shuffle();
         var test = data[..1000];
         var train = data[1000..];
         var input = (Vector v)=>{
