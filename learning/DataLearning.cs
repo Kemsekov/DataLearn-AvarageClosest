@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -191,12 +192,19 @@ public class DataLearning
     /// </param>
     public void DiffuseError(DataSet data, Vector input, Vector error){
         float totalSum = 0;
-        var dict = new ConcurrentDictionary<IData,float>(Environment.ProcessorCount,data.Data.Count);
-        DoOnClosest(data,input,(a,b)=>dict[a]=b,sum=>totalSum=sum);
-        Parallel.ForEach(dict,element=>
+        var pool = ArrayPool<(IData element, float coefficient)>.Shared;
+        var values = pool.Rent(data.Data.Count);
+        int lastUsedIndex = 0;
+        DoOnClosest(data,input,(a,b)=>{
+            lock(values){
+                values[lastUsedIndex++] = (a,b);
+            }
+        },sum=>totalSum=sum);
+        Parallel.ForEach(values,value=>
         {
-            var dt = element.Key;
-            var coef = element.Value;
+            var dt = value.element;
+            if(dt is null) return;
+            var coef = value.coefficient;
             dt.Input.MapIndexed((index,x)=>{
                 if(x<-1) return x;
                 var y = error[index];
@@ -204,6 +212,7 @@ public class DataLearning
                 return x-y*coef/totalSum;
             },dt.Input);
         });
+        pool.Return(values);
     }
     public Vector DiffuseOnNClosest(DataSet data, Vector input, int n){
         var inputLength = data.InputVectorLength;
