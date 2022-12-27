@@ -74,7 +74,7 @@ public class Render2DCauterization : Render
         }
         if (e.Key == Key.Q)
         {
-            FillSpace(300);
+            FillSpace(600);
         }
         if (e.Key == Key.S)
         {
@@ -82,8 +82,10 @@ public class Render2DCauterization : Render
         }
         if (e.Key == Key.W)
         {
-            // Cluster();
-            Cluster2();
+            if (clustering) return;
+            clustering = true;
+            AdaptiveDataSet.Cluster(ClusterInput, ClusterOutput);
+            clustering = false;
         }
         base.OnKeyDown(sender, e);
     }
@@ -94,12 +96,12 @@ public class Render2DCauterization : Render
         DataSet.Data.Clear();
         var colors = new[]{
                 Color.Red,
-                Color.Blue,
-                Color.Green,
-                Color.Yellow,
                 Color.Orange,
+                Color.Yellow,
+                Color.Green,
                 Color.Aqua,
-                Color.Violet
+                Color.Blue,
+                Color.BlueViolet,
             };
         var randomColor = () =>
         {
@@ -211,17 +213,7 @@ public class Render2DCauterization : Render
     bool clustering = false;
     public void Cluster2()
     {
-        if(clustering) return;
-        clustering = true;
-        //итерируемся по данным
-        //аутпут заполнен случайно
-        //для данного элемента input/output вектора
-        //предсказываем его output через input
-        //считаем ошибку как разность output элемента от предсказания
-        //диффюзим ошибку и идём дальше
-        //так делаем несколько итераций
-        AdaptiveDataSet.Cluster(ClusterInput,ClusterOutput);
-        clustering = false;
+
     }
     public void Cluster()
     {

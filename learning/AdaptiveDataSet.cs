@@ -56,8 +56,17 @@ public class AdaptiveDataSet
         var result = DataLearning.DiffuseOnNClosest(DataSet,input,n);
         return FillMissingValues(input,result);
     }
+    /// <summary>
+    /// Clusters close by input elements to be close by output element.
+    /// Can be used to do dimensionality reduction.
+    /// Requires multiple iterations to perform well.
+    /// Have a huge behavior space depending of how you change parameters for each iteration.
+    /// </summary>
+    /// <param name="ClusterInput"></param>
+    /// <param name="ClusterOutput"></param>
     public void Cluster(Func<Vector,Vector> ClusterInput, Func<Vector,Vector> ClusterOutput){
         var data = DataSet.Data;
+        if(data.Count==0) return;
         Parallel.For(0, data.Count, i =>
         {
             var element = data[i].Input;
@@ -71,6 +80,16 @@ public class AdaptiveDataSet
             DiffuseError(element, prediction);
         });
         DataLearning.NormalizeCoordinates(DataSet,ClusterOutput(data[0].Input));
+    }
+    public void ClusterByDescending(Func<Vector,Vector> ClusterInput, Func<Vector,Vector> ClusterOutput, float StartDiffusionCoefficient, float EndDiffusionCoefficient, int iterationsPerDescending = 1){
+        var original = this.DataLearning.DiffusionCoefficient;
+        DataLearning.DiffusionCoefficient = StartDiffusionCoefficient;
+        while(DataLearning.DiffusionCoefficient>=EndDiffusionCoefficient){
+            for(int i = 0;i<iterationsPerDescending;i++)
+            Cluster(ClusterInput,ClusterOutput);
+            DataLearning.DiffusionCoefficient-=1;
+        }
+        DataLearning.DiffusionCoefficient = original;
     }
     /// <summary>
     /// Restores input vector with missing values by predicting them <br/>

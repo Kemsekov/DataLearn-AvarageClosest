@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -190,15 +191,19 @@ public class DataLearning
     /// </param>
     public void DiffuseError(DataSet data, Vector input, Vector error){
         float totalSum = 0;
-        DoOnClosest(data,input,(a,b)=>{},sum=>totalSum=sum);
-        DoOnClosest(data,input,(dt,coef)=>{
+        var dict = new ConcurrentDictionary<IData,float>(Environment.ProcessorCount,data.Data.Count);
+        DoOnClosest(data,input,(a,b)=>dict[a]=b,sum=>totalSum=sum);
+        Parallel.ForEach(dict,element=>
+        {
+            var dt = element.Key;
+            var coef = element.Value;
             dt.Input.MapIndexed((index,x)=>{
                 if(x<-1) return x;
                 var y = error[index];
                 if(y<-1) return x;
                 return x-y*coef/totalSum;
             },dt.Input);
-        },sum=>{});
+        });
     }
     public Vector DiffuseOnNClosest(DataSet data, Vector input, int n){
         var inputLength = data.InputVectorLength;
@@ -277,6 +282,7 @@ public class DataLearning
     /// </summary>
     public void NormalizeCoordinates(DataSet dataSet, Vector? input = null)
     {
+        if(dataSet.Data.Count==0) return;
         input ??= new DenseVector(new float[dataSet.InputVectorLength]);
         var data = dataSet.Data;
         var maxArray = new float[dataSet.InputVectorLength];
