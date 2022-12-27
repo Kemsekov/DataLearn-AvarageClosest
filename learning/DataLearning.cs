@@ -60,7 +60,7 @@ public struct Data : IData
 public class DataSet
 {
     public int InputVectorLength { get; protected set;}
-    public IList<IData> Data { get; }
+    public IList<IData> Data { get;set; }
     public DataSet(int inputVectorLength, IList<IData>? data = null)
     {
         this.InputVectorLength = inputVectorLength;
@@ -81,11 +81,11 @@ public class DataLearning
     /// take more average values from all dataset, 
     /// when small <see langword="Diffuse"/> method will consider local values more valuable.
     /// </summary>
-    public float DiffusionTheta = 0.00001f;
+    public float DiffusionTheta = 0.001f;
     /// <summary>
     /// How strong local values is
     /// </summary>
-    public float DiffusionCoefficient = 4;
+    public float DiffusionCoefficient = 2;
 
     public DataLearning()
     {
@@ -147,6 +147,58 @@ public class DataLearning
         if (addedCoeff < DiffusionTheta) addedCoeff = 1;
         averageOutputData = (Vector)averageOutputData.Divide(addedCoeff);
         return averageOutputData;
+    }
+    /// <summary>
+    /// Method to do some computations on closest on input vector elements from data set
+    /// </summary>
+    /// <param name="OnElementWithCoefficient">
+    /// For each element in dataset there is a coefficient of how "close" 
+    /// this particular element is. 
+    /// This coefficient is computed using 
+    /// <see cref="DiffusionTheta"/> and <see cref="DiffusionCoefficient"/>
+    /// and can be used to define how important given element is relative to input vector.
+    /// The closer element is to input vector, the bigger this coefficient is.
+    /// </param>
+    /// <param name="OnEndWithTotalCoefficient">
+    /// When we completed iterating over whole dataset we can do some finishing actions by accepting sum of all coefficients
+    /// </param>
+    void DoOnClosest(DataSet data, Vector input, Action<IData,float> OnElementWithCoefficient, Action<float> OnEndWithTotalCoefficient){
+        float addedCoeff = 0;
+        float coeff;
+        float distSquared;
+        for (int i = 0; i < data.Data.Count; i++)
+        {
+            var dt = data.Data[i];
+            distSquared = MathF.Pow(Distance(input, dt.Input), DiffusionCoefficient);
+            distSquared = Math.Max(distSquared, DiffusionTheta);
+            coeff = ActivationFunction(distSquared);
+            OnElementWithCoefficient(dt,coeff);
+            addedCoeff += coeff;
+            
+        }
+        if (addedCoeff < DiffusionTheta) addedCoeff = 1;
+        OnEndWithTotalCoefficient(addedCoeff);
+    }
+    /// <summary>
+    /// Diffuses error vector on prediction from input vector so
+    /// prediction will produce better results
+    /// </summary>
+    /// <param name="input">We will diffuse error on prediction from this vector</param>
+    /// <param name="error">
+    /// How much we need to alter prediction on given input. <br/>
+    /// Basically difference between prediction and required output
+    /// </param>
+    public void DiffuseError(DataSet data, Vector input, Vector error){
+        float totalSum = 0;
+        DoOnClosest(data,input,(a,b)=>{},sum=>totalSum=sum);
+        DoOnClosest(data,input,(dt,coef)=>{
+            dt.Input.MapIndexed((index,x)=>{
+                if(x<-1) return x;
+                var y = error[index];
+                if(y<-1) return x;
+                return x-y*coef/totalSum;
+            },dt.Input);
+        },sum=>{});
     }
     public Vector DiffuseOnNClosest(DataSet data, Vector input, int n){
         var inputLength = data.InputVectorLength;
@@ -212,23 +264,43 @@ public class DataLearning
             position[0] += step;
             normalizeVector(ref position, step);
         }
-        NormalizeCoordinates(dataSet, CoordinatesScale, CoordinatesShift);
+        NormalizeCoordinates(dataSet);
+        foreach(var d in dataSet.Data){
+            d.Input=(Vector)(d.Input*CoordinatesScale+CoordinatesShift);
+        }
     }
     /// <summary>
-    /// Makes sure that <paramref name="InputVectorLength"/> part of data is filling bounds
+    /// Makes sure that input(non missing) part of data is filling bounds
     /// in range [0,1]. 
     /// Like apply linear transformation to input part of vectors in data that it
     /// fills [0,1] space.
     /// </summary>
-    void NormalizeCoordinates(DataSet dataSet, float scaleCoefficient = 1, Vector? shift = null)
+    public void NormalizeCoordinates(DataSet dataSet, Vector? input = null)
     {
+        input ??= new DenseVector(new float[dataSet.InputVectorLength]);
         var data = dataSet.Data;
-        var max = dataSet.Data.Max(x => x.Input.Max());
-        shift ??= new DenseVector(new float[dataSet.InputVectorLength]);
+        var maxArray = new float[dataSet.InputVectorLength];
+        var minArray = new float[dataSet.InputVectorLength];;
+        Array.Fill(maxArray,float.MinValue);
+        Array.Fill(minArray,float.MaxValue);
+        Vector max = new DenseVector(maxArray);
+        Vector min = new DenseVector(minArray);
+
         for (int i = 0; i < data.Count; i++)
         {
-            var scaled = data[i].Input.Divide(max) * scaleCoefficient + shift;
-            data[i].Input = (Vector)scaled;
+            var dt = data[i].Input;
+            max = (Vector)(max.PointwiseMaximum(dt));
+            min = (Vector)(min.PointwiseMinimum(dt));
+        }
+        var diff = max-min;
+        for (int i = 0; i < data.Count; i++)
+        {
+            var dt = data[i].Input;
+
+            dt.MapIndexed((index,x)=>{
+                if(input[index]<-1) return x;
+                return (x-min[index])/(diff[index]);
+            },dt);
         }
     }
 }

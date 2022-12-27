@@ -81,6 +81,7 @@ public abstract class Render
         CanvasDrawer.DrawText("Use wheel to place elements", new(x, 160), Color.Azure, 17);
 
     }
+    public virtual void Compute() { }
     public async void ComputeStuff()
     {
         var watch = new Stopwatch();
@@ -88,11 +89,14 @@ public abstract class Render
         {
             watch.Restart();
             if (!Pause)
+            {
+                Compute();
                 lock (DataLearning)
                 {
-                    AdaptiveDataSet.Predict(Approximation,GetInput);
+                    AdaptiveDataSet.Predict(Approximation, GetInput);
                     // AdaptiveDataSet.PredictOnNClosest(Approximation,GetInput,10);
                 }
+            }
             ComputeTime = watch.ElapsedMilliseconds * 1f / 1000;
             await Task.Delay(computeIntervalMilliseconds);
         }

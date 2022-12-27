@@ -31,13 +31,17 @@ public partial class MainWindow : Window
         dynamic settings = JObject.Parse(File.ReadAllText("settings.json"));
         var mode = settings.ModeSelected;
 
-        while(!IsActive) await Task.Delay(10);
+        while(!IsActive) await Task.Delay(100);
         Render r = default;
         if(mode=="2D")
         r = new Render2D(Canvas);
         if(mode=="1D")
         r = new Render1D(Canvas);
-        if(r is null) throw new ArgumentException("Choose 1D or 2D as ModeSelected in settings.json");
+
+        if(mode=="2DCauterization")
+        r = new Render2DCauterization(Canvas);
+
+        if(r is null) throw new ArgumentException("Choose one of available modes from settings.json");
         r.RenderStuff();
         Task.Run(r.ComputeStuff);
         this.KeyDown += r.OnKeyDown;

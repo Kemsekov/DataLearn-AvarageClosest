@@ -56,6 +56,22 @@ public class AdaptiveDataSet
         var result = DataLearning.DiffuseOnNClosest(DataSet,input,n);
         return FillMissingValues(input,result);
     }
+    public void Cluster(Func<Vector,Vector> ClusterInput, Func<Vector,Vector> ClusterOutput){
+        var data = DataSet.Data;
+        Parallel.For(0, data.Count, i =>
+        {
+            var element = data[i].Input;
+            var input = ClusterInput(element);
+            var prediction = Predict(input);
+            prediction.MapIndexed((index, x) =>
+            {
+                if (x < -1) return x;
+                return element[index] - x;
+            }, prediction);
+            DiffuseError(element, prediction);
+        });
+        DataLearning.NormalizeCoordinates(DataSet,ClusterOutput(data[0].Input));
+    }
     /// <summary>
     /// Restores input vector with missing values by predicting them <br/>
     /// Value is missing if it is less than -1 <br/>
@@ -69,8 +85,10 @@ public class AdaptiveDataSet
         var result = DataLearning.Diffuse(DataSet, input);
         return FillMissingValues(input, result);
     }
-
-    private static Vector FillMissingValues(Vector input, Vector result)
+    public void DiffuseError(Vector input,Vector error){
+        DataLearning.DiffuseError(DataSet,input,error);
+    }
+    public static Vector FillMissingValues(Vector input, Vector result)
     {
         foreach (var e in input.Select((value, index) => (value, index)).Where(x => x.value >= -1))
         {
@@ -91,7 +109,7 @@ public class AdaptiveDataSet
     /// input(except for all missing values will be restored by prediction). <br/>
     /// But when given input is really out of what model predicts it will produce something completely different.
     /// </returns>
-    public Vector PurePrediction(Vector input)
+    public Vector PredictPure(Vector input)
     {
         return DataLearning.Diffuse(DataSet, input);
     }
@@ -231,7 +249,7 @@ public class AdaptiveDataSet
                     return -2;
                 return x;
             }, inputWithMissingValues);
-            var restoredByVector = PurePrediction(inputWithMissingValues);
+            var restoredByVector = PredictPure(inputWithMissingValues);
             var diff = (input - restoredByVector);
             missingValuesError += ((float)diff.L2Norm());
         }

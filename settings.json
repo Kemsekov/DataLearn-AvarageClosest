@@ -1,4 +1,4 @@
 {
-    "AvailableModes" : ["1D","2D"],
-    "ModeSelected" : "2D"
+    "AvailableModes" : ["1D","2D", "2DCauterization"],
+    "ModeSelected" : "2DCauterization"
 }

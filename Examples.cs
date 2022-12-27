@@ -118,7 +118,7 @@ public class Examples
             var t = element.Data;
             IData d = new Data() { Input = t};
             if(restoreMissingValues && element.MissingColumns>0){
-                d.Input = adaptiveDataSet.PurePrediction(d.Input);
+                d.Input = adaptiveDataSet.PredictPure(d.Input);
             }
             adaptiveDataSet.AddByMergingWithClosest(d);
         };
