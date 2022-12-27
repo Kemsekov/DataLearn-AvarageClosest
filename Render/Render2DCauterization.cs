@@ -49,6 +49,7 @@ public class Render2DCauterization : Render
         this.InputVectorLength = 5;
         this.DataSet = new DataSet(InputVectorLength);
         this.DataLearning = new DataLearning();
+        DataLearning.DiffusionTheta = 0.000001f;
         this.Approximation = DataLearning.GetApproximationSet(ApproximationSize, 2, 1, new DenseVector(new float[2]));
         ExpandApproximationSet();
         this.AdaptiveDataSet = new AdaptiveDataSet(DataSet, DataLearning, 100);
@@ -82,10 +83,14 @@ public class Render2DCauterization : Render
         }
         if (e.Key == Key.W)
         {
-            if (clustering) return;
-            clustering = true;
-            AdaptiveDataSet.Cluster(ClusterInput, ClusterOutput);
-            clustering = false;
+            Task.Run(() =>
+            {
+                if (clustering) return;
+                clustering = true;
+                // AdaptiveDataSet.Cluster(ClusterInput, ClusterOutput);
+                AdaptiveDataSet.ClusterByDescending(ClusterInput, ClusterOutput,20,3,1);
+                clustering = false;
+            });
         }
         base.OnKeyDown(sender, e);
     }
@@ -211,29 +216,7 @@ public class Render2DCauterization : Render
     {
     }
     bool clustering = false;
-    public void Cluster2()
-    {
 
-    }
-    public void Cluster()
-    {
-
-        // var clone = DataSet.Data.ToList();
-        var data = DataSet.Data;
-        var customList = new CustomList<IData>(data);
-        AdaptiveDataSet.DataSet.Data = customList;
-        var count = data.Count;
-        // data.Clear();
-        for (int i = 0; i < count; i++)
-        {
-            customList.FreezeCount(i + 1);
-
-            if (!Cluster(i, ClusterInput, ClusterOutput))
-            {
-            }
-        }
-        AdaptiveDataSet.DataSet.Data = data;
-    }
     bool Cluster(int i, Func<Vector, Vector> getInput, Func<Vector, Vector> getOutput)
     {
         var data = DataSet.Data;
