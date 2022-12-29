@@ -5,4 +5,6 @@
 // Examples.Example4();
 // 
 //playground
+using MathNet.Numerics.LinearAlgebra.Storage;
+
 Playground.Run(args);

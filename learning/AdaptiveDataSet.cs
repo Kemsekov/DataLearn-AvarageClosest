@@ -14,42 +14,16 @@ public class AdaptiveDataSet
 {
     public DataSet DataSet { get; }
     public int MaxElements { get; }
-    public DataLearning DataLearning { get; }
+    public IDataLearning DataLearning { get; }
     public int InputVectorLength => DataSet.InputVectorLength;
-    /// <summary>
-    /// Function that used to calculate distance between two data elements. Used for adding new elements.
-    /// </summary>
-    Func<IData, IData, float> Distance { get; set; }
-    public AdaptiveDataSet(DataSet dataSet, DataLearning dataLearning, int maxElements)
+    public AdaptiveDataSet(DataSet dataSet, IDataLearning dataLearning, int maxElements)
     {
         this.DataSet = dataSet;
         this.MaxElements = maxElements;
         this.DataLearning = dataLearning;
-        this.Distance = (x1,x2)=>DataLearning.Distance(x1.Input,x2.Input);
     }
     public AdaptiveDataSet(int inputVectorLength, int maxElements) : this(new(inputVectorLength),new DataLearning(),maxElements)
     {
-    }
-    (IData data, int id) GetClosest(IData element, Func<IData, IData, float> distance)
-    {
-        int minId = 0;
-        float minDist = float.MaxValue;
-        IData? closest = null;
-        Parallel.For(0,DataSet.Data.Count,i=>
-        {
-            var x = DataSet.Data[i];
-            var dist = Distance(x, element);
-            lock(DataSet)
-            if (dist < minDist)
-            {
-                minId = i;
-                minDist = dist;
-                closest = x;
-            }
-        });
-        if (closest is null)
-            throw new ArgumentException("There is no data in dataset");
-        return (closest, minId);
     }
     public Vector PredictOnNClosest(Vector input,int n){
         if(DataSet.Data.Count==0) return input;
@@ -145,7 +119,7 @@ public class AdaptiveDataSet
             DataSet.Data.Add(element);
             return;
         }
-        var toReplace = GetClosest(element, Distance);
+        var toReplace = DataLearning.GetClosest(DataSet,element);
         element.Input = (Vector)(element.Input + toReplace.data.Input).Divide(2);
 
         DataSet.Data[toReplace.id] = element;

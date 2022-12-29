@@ -75,7 +75,7 @@ public class DataSet
 /// some inputs and outputs data set and builds approximation space.
 /// Something like regression in machine learning.
 /// </summary>
-public class DataLearning
+public class DataLearning : IDataLearning
 {
     /// <summary>
     /// Lowest value for data changing. 
@@ -83,14 +83,35 @@ public class DataLearning
     /// take more average values from all dataset, 
     /// when small <see langword="Diffuse"/> method will consider local values more valuable.
     /// </summary>
-    public float DiffusionTheta = 0.001f;
+    public float DiffusionTheta{get;set;} = 0.001f;
     /// <summary>
     /// How strong local values is
     /// </summary>
-    public float DiffusionCoefficient = 2;
+    public float DiffusionCoefficient{get;set;} = 2;
 
     public DataLearning()
     {
+    }
+    public (IData data, int id) GetClosest(DataSet dataSet, IData element)
+    {
+        int minId = 0;
+        float minDist = float.MaxValue;
+        IData? closest = null;
+        Parallel.For(0,dataSet.Data.Count,i=>
+        {
+            var x = dataSet.Data[i];
+            var dist = Distance(x.Input, element.Input);
+            lock(dataSet)
+            if (dist < minDist)
+            {
+                minId = i;
+                minDist = dist;
+                closest = x;
+            }
+        });
+        if (closest is null)
+            throw new ArgumentException("There is no data in dataset");
+        return (closest, minId);
     }
     /// <summary>
     /// Computes L2 distance between two vectors on their subvectors.<br/>
