@@ -26,8 +26,8 @@ public class Render1D : Render
         this.ApproximationSize = 256;
         this.InputVectorLength = 2;
         this.DataSet = new DataSet(InputVectorLength);
-        this.DataLearning = new DataLearning();
-        this.AdaptiveDataSet = new AdaptiveDataSet(DataSet,DataLearning,20);
+        this.DataLearning = new DataLearning(DataSet);
+        this.AdaptiveDataSet = new AdaptiveDataSet(DataLearning,20);
         this.Approximation = DataLearning.GetApproximationSet(ApproximationSize,1,1,new DenseVector(new float[1]));
         ExpandApproximationSet();
     }

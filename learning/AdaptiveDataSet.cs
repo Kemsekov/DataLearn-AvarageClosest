@@ -16,18 +16,18 @@ public class AdaptiveDataSet
     public int MaxElements { get; }
     public IDataLearning DataLearning { get; }
     public int InputVectorLength => DataSet.InputVectorLength;
-    public AdaptiveDataSet(DataSet dataSet, IDataLearning dataLearning, int maxElements)
+    public AdaptiveDataSet(IDataLearning dataLearning, int maxElements)
     {
-        this.DataSet = dataSet;
+        this.DataSet = dataLearning.DataSet;
         this.MaxElements = maxElements;
         this.DataLearning = dataLearning;
     }
-    public AdaptiveDataSet(int inputVectorLength, int maxElements) : this(new(inputVectorLength),new DataLearning(),maxElements)
+    public AdaptiveDataSet(int inputVectorLength, int maxElements) : this(new DataLearning(new(inputVectorLength)),maxElements)
     {
     }
     public Vector PredictOnNClosest(Vector input,int n){
         if(DataSet.Data.Count==0) return input;
-        var result = DataLearning.DiffuseOnNClosest(DataSet,input,n);
+        var result = DataLearning.DiffuseOnNClosest(input,n);
         return FillMissingValues(input,result);
     }
     /// <summary>
@@ -54,7 +54,7 @@ public class AdaptiveDataSet
             }, prediction);
             DiffuseError(element, prediction);
         });
-        DataLearning.NormalizeCoordinates(DataSet,ClusterOutput(data[0].Input));
+        DataLearning.NormalizeCoordinates(ClusterOutput(data[0].Input));
     }
     public void ClusterByDescending(Func<Vector,Vector> ClusterInput, Func<Vector,Vector> ClusterOutput, float StartDiffusionCoefficient, float EndDiffusionCoefficient, int iterationsPerDescending = 1){
         var original = this.DataLearning.DiffusionCoefficient;
@@ -76,11 +76,11 @@ public class AdaptiveDataSet
     public Vector Predict(Vector input)
     {
         if (DataSet.Data.Count == 0) return input;
-        var result = DataLearning.Diffuse(DataSet, input);
+        var result = DataLearning.Diffuse(input);
         return FillMissingValues(input, result);
     }
     public void DiffuseError(Vector input,Vector error){
-        DataLearning.DiffuseError(DataSet,input,error);
+        DataLearning.DiffuseError(input,error);
     }
     public static Vector FillMissingValues(Vector input, Vector result)
     {
@@ -105,7 +105,7 @@ public class AdaptiveDataSet
     /// </returns>
     public Vector PredictPure(Vector input)
     {
-        return DataLearning.Diffuse(DataSet, input);
+        return DataLearning.Diffuse(input);
     }
     /// <summary>
     /// For given element, finds another closest by input vector element
@@ -119,7 +119,7 @@ public class AdaptiveDataSet
             DataSet.Data.Add(element);
             return;
         }
-        var toReplace = DataLearning.GetClosest(DataSet,element);
+        var toReplace = DataLearning.GetClosest(element);
         element.Input = (Vector)(element.Input + toReplace.data.Input).Divide(2);
 
         DataSet.Data[toReplace.id] = element;

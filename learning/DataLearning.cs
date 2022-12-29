@@ -89,8 +89,11 @@ public class DataLearning : IDataLearning
     /// </summary>
     public float DiffusionCoefficient{get;set;} = 2;
 
-    public DataLearning()
+    public DataSet DataSet{get;set;}
+
+    public DataLearning(DataSet dataSet)
     {
+        this.DataSet = dataSet;
     }
     public (IData data, int id) GetClosest(DataSet dataSet, IData element)
     {
@@ -337,5 +340,30 @@ public class DataLearning : IDataLearning
                 return (x-min[index])/(diff[index]);
             },dt);
         }
+    }
+
+    public (IData data, int id) GetClosest(IData element)
+    {
+        return GetClosest(DataSet,element);
+    }
+
+    public Vector Diffuse(Vector input)
+    {
+        return Diffuse(DataSet,input);
+    }
+
+    public void DiffuseError(Vector input, Vector error)
+    {
+        DiffuseError(DataSet,input,error);
+    }
+
+    public Vector DiffuseOnNClosest(Vector input, int n)
+    {
+        return DiffuseOnNClosest(DataSet,input,n);
+    }
+
+    public void NormalizeCoordinates(Vector? input = null)
+    {
+        NormalizeCoordinates(DataSet,input);
     }
 }

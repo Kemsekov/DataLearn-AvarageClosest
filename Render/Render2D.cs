@@ -30,11 +30,11 @@ public class Render2D : Render
         this.ApproximationSize = 40*40;
         this.InputVectorLength = 5;
         this.DataSet = new DataSet(InputVectorLength);
-        this.DataLearning = new DataLearning();
+        this.DataLearning = new DataLearning(DataSet);
         this.Approximation = DataLearning.GetApproximationSet(ApproximationSize,2,1,new DenseVector(new float[2]));
         ExpandApproximationSet();
         
-        this.AdaptiveDataSet = new AdaptiveDataSet(DataSet,DataLearning,100);
+        this.AdaptiveDataSet = new AdaptiveDataSet(DataLearning,100);
         var n1 = Random.Shared.Next(256);
         var n2 = Random.Shared.Next(256);
         var n3 = Random.Shared.Next(256);
