@@ -67,6 +67,7 @@ public class AdaptiveDataSet
     public void Cluster(Func<Vector,Vector> ClusterInput, Func<Vector,Vector> ClusterOutput){
         var data = DataSet.Data;
         if(data.Count==0) return;
+
         Parallel.For(0, data.Count, i =>
         {
             var element = data[i].Input;

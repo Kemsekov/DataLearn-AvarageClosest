@@ -87,8 +87,26 @@ public class Render2DCauterization : Render
             {
                 if (clustering) return;
                 clustering = true;
-                // AdaptiveDataSet.Cluster(ClusterInput, ClusterOutput);
-                AdaptiveDataSet.ClusterByDescending(ClusterInput, ClusterOutput,20,3,1);
+                AdaptiveDataSet.Cluster(ClusterInput, ClusterOutput);
+                // AdaptiveDataSet.ClusterByDescending(ClusterInput, ClusterOutput,9,4,2);
+                clustering = false;
+            });
+        }
+        if (e.Key == Key.T)
+        {
+            Task.Run(() =>
+            {
+                if (clustering) return;
+                clustering = true;
+                AdaptiveDataSet.DataLearning.DiffusionCoefficient=10;
+                AdaptiveDataSet.Cluster(ClusterInput,ClusterOutput);
+                AdaptiveDataSet.Cluster(ClusterInput,ClusterOutput);
+                AdaptiveDataSet.Cluster(ClusterInput,ClusterOutput);
+                AdaptiveDataSet.DataLearning.DiffusionCoefficient=8;
+                AdaptiveDataSet.Cluster(ClusterInput,ClusterOutput);
+                AdaptiveDataSet.Cluster(ClusterInput,ClusterOutput);
+                AdaptiveDataSet.DataLearning.DiffusionCoefficient=6;
+                AdaptiveDataSet.Cluster(ClusterInput,ClusterOutput);
                 clustering = false;
             });
         }
@@ -116,7 +134,13 @@ public class Render2DCauterization : Render
         var toAdd = Enumerable.Range(0, n).Select(x =>
         {
             var color = randomColor();
-            var v = new DenseVector(new float[5] { 0, 0, color.R * 1.0f / 255, color.G * 1.0f / 255, color.B * 1.0f / 255 });
+            var arr = new float[InputVectorLength];
+            arr[0] = 0;
+            arr[1] = 0;
+            arr[2] = color.R * 1.0f / 255;
+            arr[3] = color.G * 1.0f / 255;
+            arr[4] = color.B * 1.0f / 255;
+            var v = new DenseVector(arr);
             return v;
         });
         foreach (var i in toAdd)
@@ -188,7 +212,13 @@ public class Render2DCauterization : Render
             return x;
         };
         var pos = e.GetPosition(Canvas);
-        var input = new DenseVector(new float[] { (float)pos.X / WindowSize, (float)pos.Y / WindowSize, (float)(ChosenColor.R) / 255, (float)(ChosenColor.G) / 255, (float)(ChosenColor.B) / 255 });
+        var arr = new float[InputVectorLength];
+        arr[0] = (float)pos.X / WindowSize;
+        arr[1] = (float)pos.Y / WindowSize;
+        arr[2]=(float)(ChosenColor.R) / 255; 
+        arr[3]=(float)(ChosenColor.G) / 255; 
+        arr[4]=(float)(ChosenColor.B) / 255;
+        var input = new DenseVector(arr);
         var toAdd = new Data() { Input = input };
         lock (DataLearning)
         {

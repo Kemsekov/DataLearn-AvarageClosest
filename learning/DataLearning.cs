@@ -176,7 +176,6 @@ public class DataLearning
             coeff = ActivationFunction(distSquared);
             OnElementWithCoefficient(dt,coeff);
             addedCoeff += coeff;
-            
         }
         if (addedCoeff < DiffusionTheta) addedCoeff = 1;
         OnEndWithTotalCoefficient(addedCoeff);
