@@ -14,10 +14,10 @@ where T : unmanaged, System.IEquatable<T>, System.IFormattable
     public DataStorage<T> DataStorage { get; }
     public int StartIndex { get; }
 
-    public ArrayedVectorStorage(DataStorage<T> dataStorage,int length) : base(length)
+    public ArrayedVectorStorage(DataStorage<T> dataStorage) : base(dataStorage.ElementSize)
     {
         this.DataStorage = dataStorage;
-        this.StartIndex = dataStorage.Insert(new T[length]);
+        this.StartIndex = dataStorage.Insert(new T[dataStorage.ElementSize]);
         if(this.StartIndex==-1)
             throw new IndexOutOfRangeException("Could not create new ArrayedVector because corresponding data storage out of space");
     }

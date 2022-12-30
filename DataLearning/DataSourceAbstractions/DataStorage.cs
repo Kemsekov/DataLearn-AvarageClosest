@@ -1,9 +1,3 @@
-
-// TODO: add tests for it
-//Test every single method and property(except for Storage and Indices)
-
-
-
 /// <summary>
 /// Provides a chunk-type data storage.
 /// </summary>
@@ -15,7 +9,6 @@ where T : unmanaged
         this.Storage = new ArrayDataAccess<T>(new T[length*elementSize]);
         this.Indices = new ArrayDataAccess<byte>(new byte[length]);
         this.ElementSize = elementSize;
-        Indices.AsSpan(0..length).Fill(0);
     }
     public DataStorage(IDataAccess<T> storage, IDataAccess<byte> indices){
         Storage = storage;
@@ -27,17 +20,10 @@ where T : unmanaged
     {
         var shift = index*ElementSize;
         if (IsFree(index))
-            return Storage.AsSpan(shift..(shift+ElementSize));
-        throw new KeyNotFoundException($"There is no element under index {index}");
+            throw new KeyNotFoundException($"There is no element under index {index}");
+        return Storage.AsSpan(shift..(shift+ElementSize));
     }
-    public void Set(int index, ReadOnlySpan<T> value)
-    {
-        if(IsFree(index)) Length++;
-        Indices[index] = 1;
-        var shift = index*ElementSize;
-        for(int i = 0;i<ElementSize;i++)
-            Storage[shift+i] = value[i];
-    }
+    public int MaxLength => Storage.Length/ElementSize;
     public int Length{get;private set;} = 0;
     public IDataAccess<T> Storage { get; }
     public IDataAccess<byte> Indices { get; }

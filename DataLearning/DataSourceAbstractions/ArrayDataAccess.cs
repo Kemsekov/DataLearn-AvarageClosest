@@ -17,4 +17,15 @@ public class ArrayDataAccess<T> : IDataAccess<T>
     {
         return Array.AsSpan(range);
     }
+
+    public IEnumerator<T> GetEnumerator()
+    {
+        foreach(var a in Array)
+            yield return a;
+    }
+
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+        return Array.GetEnumerator();
+    }
 }

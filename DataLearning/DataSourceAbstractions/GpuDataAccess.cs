@@ -20,4 +20,15 @@ where T : unmanaged
     {
         return new Span<T>(Pointer,Length);
     }
+
+    public IEnumerator<T> GetEnumerator()
+    {
+        for(int i = 0;i<Length;i++)
+            yield return this[i];
+    }
+
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+        return GetEnumerator();
+    }
 }

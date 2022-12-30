@@ -9,4 +9,8 @@ public class ArrayedVector : MathNet.Numerics.LinearAlgebra.Single.Vector
     public ArrayedVector(ArrayedVectorStorage<float> storage) : base(storage)
     {
     }
+    public ArrayedVector(DataStorage<float> dataStorage) : base(new ArrayedVectorStorage<float>(dataStorage))
+    {
+
+    }
 }
