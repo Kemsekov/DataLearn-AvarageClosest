@@ -9,13 +9,15 @@ public class ArrayDataAccess<T> : IDataAccess<T>
     }
     public T this[int index]{get=>Array[index];set=>Array[index]=value;}
 
+    public T[] this[Range range] => Array[range];
+
     public int Length => Array.Length;
 
     public T[] Array { get; }
 
-    public Span<T> AsSpan(Range range)
+    public void Fill(T element)
     {
-        return Array.AsSpan(range);
+        Array.AsSpan().Fill(element);
     }
 
     public IEnumerator<T> GetEnumerator()

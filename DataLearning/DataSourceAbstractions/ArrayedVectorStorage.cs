@@ -33,7 +33,7 @@ where T : unmanaged, System.IEquatable<T>, System.IFormattable
     {
         if(disposed)
             throw new ObjectDisposedException("Could not access data of disposed vector");
-        DataStorage.Get(StartIndex+index)[index] = value;
+        DataStorage.Set(StartIndex,index,value);
     }
     ~ArrayedVectorStorage(){
         Dispose();

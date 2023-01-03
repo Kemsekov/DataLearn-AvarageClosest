@@ -7,5 +7,6 @@ public interface IDataAccess<T> : IEnumerable<T>
 {
     int Length{get;}
     T this[int index]{get;set;}
-    Span<T> AsSpan(Range range);
+    T[] this[Range range]{get;}
+    void Fill(T element);
 }

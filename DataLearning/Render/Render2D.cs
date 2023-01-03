@@ -31,7 +31,7 @@ public class Render2D : Render
         this.InputVectorLength = 5;
         this.DataSet = new DataSet(InputVectorLength);
         this.DataLearning = new DataLearning(DataSet);
-        this.Approximation = DataLearning.GetApproximationSet(ApproximationSize,2,1,new DenseVector(new float[2]));
+        this.Approximation = DataHelper.GetApproximationSet(ApproximationSize,2,1,new DenseVector(new float[2]));
         ExpandApproximationSet();
         
         this.AdaptiveDataSet = new AdaptiveDataSet(DataLearning,100);
@@ -78,7 +78,7 @@ public class Render2D : Render
         ChosenColor = Color.FromArgb(r,g,b);
     }
 
-    void DrawData(DataSet dataSet, Func<Vector, Color> getColor, int size = 10)
+    void DrawData(IDataSet dataSet, Func<Vector, Color> getColor, int size = 10)
     {
         var data = dataSet.Data;
         for (int i = 0; i < data.Count; i++)

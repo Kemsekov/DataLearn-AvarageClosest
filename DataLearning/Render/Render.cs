@@ -13,10 +13,10 @@ public abstract class Render
     public CanvasShapeDrawer CanvasDrawer;
     public int ApproximationSize;
     public int InputVectorLength;
-    public DataSet DataSet;
+    public IDataSet DataSet;
     public AdaptiveDataSet AdaptiveDataSet;
-    public DataSet Approximation;
-    public DataLearning DataLearning;
+    public IDataSet Approximation;
+    public IDataLearning DataLearning;
     public int renderIntervalMilliseconds = 100;
     public int computeIntervalMilliseconds = 100;
     public float WindowSize = 1000f;

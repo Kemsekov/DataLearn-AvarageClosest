@@ -13,7 +13,7 @@ public static class Extensions
     /// Finds N minimal elements in O(N log n) time, 
     /// where N is count of elements in collection and n is a number of elements to retrieve
     /// </summary>
-    public static IList<T> FindNMinimal<T,TMeasure>(this IEnumerable<T> collection,int n,Func<T,TMeasure> getMeasure){
+    public static List<T> FindNMinimal<T,TMeasure>(this IEnumerable<T> collection,int n,Func<T,TMeasure> getMeasure){
         var queue = new System.Collections.Generic.PriorityQueue<T,TMeasure>(n);
         foreach(var el in collection)
             queue.Enqueue(el,getMeasure(el));

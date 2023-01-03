@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 public interface IDataLearning
 {
-    DataSet DataSet{get;}
+    IDataSet DataSet{get;}
     float DiffusionTheta{get;set;}       
     float DiffusionCoefficient{get;set;}
     (IData data, int id) GetClosest(IData element);

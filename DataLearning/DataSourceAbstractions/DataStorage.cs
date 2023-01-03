@@ -14,14 +14,17 @@ where T : unmanaged
         Storage = storage;
         Indices = indices;
         this.ElementSize = storage.Length/indices.Length;
-        Indices.AsSpan(0..Indices.Length).Fill(0);
+        Indices.Fill(0);
     }
-    public Span<T> Get(int index)   
+    public ReadOnlySpan<T> Get(int index)   
     {
         var shift = index*ElementSize;
         if (IsFree(index))
             throw new KeyNotFoundException($"There is no element under index {index}");
-        return Storage.AsSpan(shift..(shift+ElementSize));
+        return Storage[shift..(shift+ElementSize)];
+    }
+    public void Set(int index, int position, T element){
+        Storage[index*ElementSize+position] = element;
     }
     public int MaxLength => Storage.Length/ElementSize;
     public int Length{get;private set;} = 0;

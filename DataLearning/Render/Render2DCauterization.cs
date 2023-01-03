@@ -19,6 +19,7 @@ public class Render2DCauterization : Render
     };
 
     public int IterationsCount { get; private set; }
+    public int ClusterSetSize { get; private set; } = 600;
 
     public Func<Vector, Vector> ClusterInput = (Vector x) =>
         {
@@ -50,7 +51,7 @@ public class Render2DCauterization : Render
         this.DataSet = new DataSet(InputVectorLength);
         this.DataLearning = new DataLearning(DataSet);
         DataLearning.DiffusionTheta = 0.000001f;
-        this.Approximation = DataLearning.GetApproximationSet(ApproximationSize, 2, 1, new DenseVector(new float[2]));
+        this.Approximation = DataHelper.GetApproximationSet(ApproximationSize, 2, 1, new DenseVector(new float[2]));
         ExpandApproximationSet();
         this.AdaptiveDataSet = new AdaptiveDataSet(DataLearning, 100);
         var n1 = Random.Shared.Next(256);
@@ -74,8 +75,10 @@ public class Render2DCauterization : Render
             ChosenColor = RandomColor();
         }
         if (e.Key == Key.Q)
+            ChosenColor = ShiftColor(ChosenColor,0.3f);
+        if (e.Key == Key.A)
         {
-            FillSpace(600);
+            FillSpace(ClusterSetSize);
         }
         if (e.Key == Key.S)
         {
@@ -182,7 +185,7 @@ public class Render2DCauterization : Render
         return Color.FromArgb(r, g, b);
     }
 
-    void DrawData(DataSet dataSet, Func<Vector, Color> getColor, int size = 10)
+    void DrawData(IDataSet dataSet, Func<Vector, Color> getColor, int size = 10)
     {
         var data = dataSet.Data;
 
@@ -223,8 +226,6 @@ public class Render2DCauterization : Render
         lock (DataLearning)
         {
             DataSet.Data.Add(toAdd);
-            Cluster(DataSet.Data.Count - 1, ClusterInput, ClusterOutput);
-            // AdaptiveDataSet.AddByMergingWithClosest(toAdd);
         }
     }
     public override async void RenderStuff()
@@ -246,37 +247,17 @@ public class Render2DCauterization : Render
     {
     }
     bool clustering = false;
-
-    bool Cluster(int i, Func<Vector, Vector> getInput, Func<Vector, Vector> getOutput)
-    {
-        var data = DataSet.Data;
-        var vector = (Vector)data[i].Input;
-        var input = getInput(vector);
-        var output = getOutput(vector);
-
-        var result = AdaptiveDataSet.PredictPure(input);
-        var outputResult = AdaptiveDataSet.PredictPure(getOutput(result));
-
-        var distOnInput1 = DataLearning.Distance(input, outputResult);
-        var distOnInput2 = DataLearning.Distance(input, result);
-        // System.Console.WriteLine(distOnInput);
-        if (distOnInput1 > distOnInput2)
-        {
-            data[i].Input = AdaptiveDataSet.FillMissingValues(input, result);
-            return true;
-        }
-        return false;
-    }
     void DrawColorPicker()
     {
         var pos = new System.Numerics.Vector2(1.1f, 0.9f) * WindowSize;
         var size = 0.1f * WindowSize;
         CanvasDrawer.FillEllipse(pos, size, size, ChosenColor);
+        CanvasDrawer.DrawText($"Press Q to shift chosen color", new(pos.X - size + 10, pos.Y - size - 80), Color.Azure, 17);
+        CanvasDrawer.DrawText($"Press T to cluster by sequence", new(pos.X - size + 10, pos.Y - size - 60), Color.Azure, 17);
         CanvasDrawer.DrawText($"Press W to cluster", new(pos.X - size + 10, pos.Y - size - 40), Color.Azure, 17);
         CanvasDrawer.DrawText($"Press S to shuffle elements positions", new(pos.X - size + 10, pos.Y - size - 20), Color.Azure, 17);
-        CanvasDrawer.DrawText($"Press Q to fill 300 elements", new(pos.X - size + 10, pos.Y - size), Color.Azure, 17);
+        CanvasDrawer.DrawText($"Press A to fill ${ClusterSetSize} elements", new(pos.X - size + 10, pos.Y - size), Color.Azure, 17);
         CanvasDrawer.DrawText($"Press E to change color", new(pos.X - size + 10, pos.Y - size + 20), Color.Azure, 17);
-
     }
 
 }

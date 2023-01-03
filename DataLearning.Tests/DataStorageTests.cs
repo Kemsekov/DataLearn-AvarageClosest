@@ -23,7 +23,7 @@ public class DataStorageTests
     {
         var d = new DataStorage<float>(5,5);
         Assert.Equal(d.Length,0);
-        Assert.Equal(d.MaxLength,25);
+        Assert.Equal(d.MaxLength,5);
         Assert.Equal(d.Storage.Length,25);
         Assert.Equal(d.Indices.Length,5);
         Assert.True(d.Storage.All(x=>x==0));

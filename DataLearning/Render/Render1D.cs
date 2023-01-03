@@ -28,13 +28,13 @@ public class Render1D : Render
         this.DataSet = new DataSet(InputVectorLength);
         this.DataLearning = new DataLearning(DataSet);
         this.AdaptiveDataSet = new AdaptiveDataSet(DataLearning,20);
-        this.Approximation = DataLearning.GetApproximationSet(ApproximationSize,1,1,new DenseVector(new float[1]));
+        this.Approximation = DataHelper.GetApproximationSet(ApproximationSize,1,1,new DenseVector(new float[1]));
         ExpandApproximationSet();
     }
 
 
 
-    void DrawData(DataSet dataSet, Func<Vector, Color> getColor)
+    void DrawData(IDataSet dataSet, Func<Vector, Color> getColor)
     {
         var data = dataSet.Data;
         var count = data.Count;
@@ -56,7 +56,7 @@ public class Render1D : Render
             DataSet.Data.Add(new Data(){Input = input});
         }
     }
-    void DrawFunction(DataSet dataSet, Color color)
+    void DrawFunction(IDataSet dataSet, Color color)
     {
         var data = dataSet.Data;
         lock(DataLearning)

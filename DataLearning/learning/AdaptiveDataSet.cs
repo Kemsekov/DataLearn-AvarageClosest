@@ -12,7 +12,7 @@ using MathNet.Numerics.LinearAlgebra.Single;
 /// </summary>
 public class AdaptiveDataSet
 {
-    public DataSet DataSet { get; }
+    public IDataSet DataSet { get; }
     public int MaxElements { get; }
     public IDataLearning DataLearning { get; }
     public int InputVectorLength => DataSet.InputVectorLength;
@@ -22,7 +22,7 @@ public class AdaptiveDataSet
         this.MaxElements = maxElements;
         this.DataLearning = dataLearning;
     }
-    public AdaptiveDataSet(int inputVectorLength, int maxElements) : this(new DataLearning(new(inputVectorLength)),maxElements)
+    public AdaptiveDataSet(int inputVectorLength, int maxElements) : this(new DataLearning(new DataSet(inputVectorLength)),maxElements)
     {
     }
     public Vector PredictOnNClosest(Vector input,int n){
@@ -189,7 +189,7 @@ public class AdaptiveDataSet
     /// <summary>
     /// Diffuses <paramref name="dataSet"/> on <paramref name="Approximation"/> dataset.
     /// </summary>
-    public void Predict(DataSet Approximation,Func<Vector,Vector> getInput)
+    public void Predict(IDataSet Approximation,Func<Vector,Vector> getInput)
     {
         if (DataSet.Data.Count == 0) return;
         Parallel.For(0, Approximation.Data.Count, (i, _) =>

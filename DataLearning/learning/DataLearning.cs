@@ -28,8 +28,6 @@ public interface IData
     {
         return new Data(){Input=(Vector)(left.Input*scalar)};
     }
-    IData Divide(float scalar);
-    IData Clone();
 }
 
 public struct Data : IData
@@ -46,23 +44,18 @@ public struct Data : IData
         Input = new DenseVector(input);
     }
     public Vector Input{get;set;}
-    public IData Clone()
-    {
-        return new Data((Vector)Input.Clone());
-    }
-
-    public IData Divide(float scalar)
-    {
-        return new Data(){
-        Input = (Vector)Input.Divide(scalar)
-        };
-    }
 }
 
-public class DataSet
+public interface IDataSet
+{
+    int InputVectorLength { get;}
+    IList<IData> Data { get;}
+}
+
+public class DataSet : IDataSet
 {
     public int InputVectorLength { get; protected set;}
-    public IList<IData> Data { get;set; }
+    public virtual IList<IData> Data { get;}
     public DataSet(int inputVectorLength, IList<IData>? data = null)
     {
         this.InputVectorLength = inputVectorLength;
@@ -89,13 +82,13 @@ public class DataLearning : IDataLearning
     /// </summary>
     public float DiffusionCoefficient{get;set;} = 2;
 
-    public DataSet DataSet{get;set;}
+    public IDataSet DataSet{get;set;}
 
-    public DataLearning(DataSet dataSet)
+    public DataLearning(IDataSet dataSet)
     {
         this.DataSet = dataSet;
     }
-    public (IData data, int id) GetClosest(DataSet dataSet, IData element)
+    public (IData data, int id) GetClosest(IDataSet dataSet, IData element)
     {
         int minId = 0;
         float minDist = float.MaxValue;
@@ -103,7 +96,7 @@ public class DataLearning : IDataLearning
         Parallel.For(0,dataSet.Data.Count,i=>
         {
             var x = dataSet.Data[i];
-            var dist = Distance(x.Input, element.Input);
+            var dist = DataHelper.Distance(x.Input, element.Input);
             lock(dataSet)
             if (dist < minDist)
             {
@@ -116,25 +109,6 @@ public class DataLearning : IDataLearning
             throw new ArgumentException("There is no data in dataset");
         return (closest, minId);
     }
-    /// <summary>
-    /// Computes L2 distance between two vectors on their subvectors.<br/>
-    /// Subvectors is taken in such a way, that if any of two vectors have a missing value at
-    /// given index it will not consider this index while computing distance.<br/>
-    /// For example for vectors <see langword="(1,2,3,-2)"/> and <see langword="(-2,1,5,-4)"/> <br/>
-    /// result will be <see langword="sqrt((2-1)^2+(5-3)^2)"/>
-    /// </summary>
-    public float Distance(Vector n1, Vector n2)
-    {
-        float distance = 0;
-        float holder = 0;
-        var len = Math.Min(n1.Count,n2.Count);
-        for(int i = 0;i<len;i++){
-            if(n1[i]<-1 || n2[i]<-1) continue;
-            holder = n1[i]-n2[i];
-            distance+=holder*holder;
-        }
-        return MathF.Sqrt(distance);
-    }
 
     /// <summary>
     /// Diffuses <paramref name="data"/> on <paramref name="input"/> vector.<br/>
@@ -145,7 +119,7 @@ public class DataLearning : IDataLearning
     /// <returns>
     /// Diffused vector which corresponds to 'average' of local known(not missing) data
     /// </returns>
-    public Vector Diffuse(DataSet data, Vector input)
+    public Vector Diffuse(IDataSet data, Vector input)
     {
         var inputLength = data.InputVectorLength;
         Vector averageOutputData = new DenseVector(new float[inputLength]);
@@ -157,7 +131,7 @@ public class DataLearning : IDataLearning
         for (int i = 0; i < data.Data.Count; i++)
         {
             var dt = data.Data[i];
-            distSquared = MathF.Pow(Distance(input, dt.Input), DiffusionCoefficient);
+            distSquared = MathF.Pow(DataHelper.Distance(input, dt.Input), DiffusionCoefficient);
             distSquared = Math.Max(distSquared, DiffusionTheta);
             coeff = ActivationFunction(distSquared);
             addedCoeff += coeff;
@@ -188,14 +162,14 @@ public class DataLearning : IDataLearning
     /// <param name="OnEndWithTotalCoefficient">
     /// When we completed iterating over whole dataset we can do some finishing actions by accepting sum of all coefficients
     /// </param>
-    void DoOnClosest(DataSet data, Vector input, Action<IData,float> OnElementWithCoefficient, Action<float> OnEndWithTotalCoefficient){
+    void DoOnClosest(IDataSet data, Vector input, Action<IData,float> OnElementWithCoefficient, Action<float> OnEndWithTotalCoefficient){
         float addedCoeff = 0;
         float coeff;
         float distSquared;
         for (int i = 0; i < data.Data.Count; i++)
         {
             var dt = data.Data[i];
-            distSquared = MathF.Pow(Distance(input, dt.Input), DiffusionCoefficient);
+            distSquared = MathF.Pow(DataHelper.Distance(input, dt.Input), DiffusionCoefficient);
             distSquared = Math.Max(distSquared, DiffusionTheta);
             coeff = ActivationFunction(distSquared);
             OnElementWithCoefficient(dt,coeff);
@@ -213,7 +187,7 @@ public class DataLearning : IDataLearning
     /// How much we need to alter prediction on given input. <br/>
     /// Basically difference between prediction and required output
     /// </param>
-    public void DiffuseError(DataSet data, Vector input, Vector error){
+    public void DiffuseError(IDataSet data, Vector input, Vector error){
         float totalSum = 0;
         var pool = ArrayPool<(IData element, float coefficient)>.Shared;
         var values = pool.Rent(data.Data.Count);
@@ -237,28 +211,10 @@ public class DataLearning : IDataLearning
         });
         pool.Return(values);
     }
-    public Vector DiffuseOnNClosest(DataSet data, Vector input, int n){
+    public Vector DiffuseOnNClosest(IDataSet data, Vector input, int n){
         var inputLength = data.InputVectorLength;
-        var mins = data.Data.FindNMinimal(n,x=>Distance(x.Input,input));
+        var mins = data.Data.FindNMinimal(n,x=>DataHelper.Distance(x.Input,input));
         return Diffuse(new DataSet(data.InputVectorLength,mins),input);
-    }
-    /// <summary>
-    /// Returns dataset that corresponds to given <paramref name="dataSet"/>, 
-    /// that evenly distributed on n-dimensional(where n is input length) identity cube and 
-    /// scaled/shifted by <paramref name="CoordinatesScale"/> and <paramref name="CoordinatesShift"/>
-    /// </summary>
-    /// <param name="approximationSize">How many dots to create in space?</param>
-    public DataSet GetApproximationSet(int approximationSize, int InputVectorLength, float CoordinatesScale, Vector CoordinatesShift)
-    {
-        var Approximation = new DataSet(InputVectorLength, new List<IData>(approximationSize));
-        for (int i = 0; i < approximationSize; i++)
-        {
-            var input = new float[InputVectorLength];
-            Array.Fill(input, 0.5f);
-            Approximation.Data.Add(new Data(input));
-        }
-        DistributeData(Approximation, CoordinatesScale, CoordinatesShift);
-        return Approximation;
     }
 
     /// <summary>
@@ -272,74 +228,14 @@ public class DataLearning : IDataLearning
         return 1 / (distSquared * distSquared);
     }
     /// <summary>
-    /// Moves data points from each other to normally fill input vector space
-    /// </summary>
-    public void DistributeData(DataSet dataSet, float CoordinatesScale, Vector CoordinatesShift)
-    {
-        var InputVectorLength = dataSet.InputVectorLength;
-        var data = dataSet.Data;
-        void normalizeVector(ref DenseVector position, float step)
-        {
-            for (int k = 0; k < InputVectorLength; k++)
-            {
-                if (position[k] >= 1 - step / 2)
-                {
-                    var tmp = position[k] - 1;
-                    position[k] = 0;
-                    if (k + 1 >= InputVectorLength) break;
-                    position[k + 1] += step;
-                }
-            }
-        }
-        var chunkSize = MathF.Pow(data.Count, 1f / InputVectorLength);
-        var step = 1f / chunkSize;
-        var position = new DenseVector(new float[InputVectorLength]);
-
-        for (int i = 0; i < data.Count; i++)
-        {
-            data[i].Input = (Vector)position.Clone();
-            position[0] += step;
-            normalizeVector(ref position, step);
-        }
-        NormalizeCoordinates(dataSet);
-        foreach(var d in dataSet.Data){
-            d.Input=(Vector)(d.Input*CoordinatesScale+CoordinatesShift);
-        }
-    }
-    /// <summary>
     /// Makes sure that input(non missing) part of data is filling bounds
     /// in range [0,1]. 
     /// Like apply linear transformation to input part of vectors in data that it
     /// fills [0,1] space.
     /// </summary>
-    public void NormalizeCoordinates(DataSet dataSet, Vector? input = null)
+    public void NormalizeCoordinates(IDataSet dataSet, Vector? input = null)
     {
-        if(dataSet.Data.Count==0) return;
-        input ??= new DenseVector(new float[dataSet.InputVectorLength]);
-        var data = dataSet.Data;
-        var maxArray = new float[dataSet.InputVectorLength];
-        var minArray = new float[dataSet.InputVectorLength];;
-        Array.Fill(maxArray,float.MinValue);
-        Array.Fill(minArray,float.MaxValue);
-        Vector max = new DenseVector(maxArray);
-        Vector min = new DenseVector(minArray);
-
-        for (int i = 0; i < data.Count; i++)
-        {
-            var dt = data[i].Input;
-            max = (Vector)(max.PointwiseMaximum(dt));
-            min = (Vector)(min.PointwiseMinimum(dt));
-        }
-        var diff = max-min;
-        for (int i = 0; i < data.Count; i++)
-        {
-            var dt = data[i].Input;
-
-            dt.MapIndexed((index,x)=>{
-                if(input[index]<-1) return x;
-                return (x-min[index])/(diff[index]);
-            },dt);
-        }
+        DataHelper.NormalizeCoordinates(dataSet,input);
     }
 
     public (IData data, int id) GetClosest(IData element)
