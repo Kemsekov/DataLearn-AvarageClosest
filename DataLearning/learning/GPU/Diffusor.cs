@@ -10,23 +10,39 @@ using Veldrid.Utilities;
 
 public unsafe class Diffusor : IDataOperation
 {
-    public Diffusor(GpuDataLearningInitialization init, string pathToShader)
+    public Diffusor(GpuDataLearningInitialization init, string shaderText)
     {
         this.Init = init;
-        this.ShaderText = File.ReadAllText(pathToShader).Trim();
+        this.ShaderText = shaderText.Trim();
+        InitResources();
+        this.InputVectorAccess = new GpuDataAccess<float>(InputVectorBuffer,Init.GraphicsDevice,Init.Factory);
     }
 
     public GpuDataLearningInitialization Init { get; }
     public string ShaderText { get; }
     public DeviceBuffer InputVectorBuffer { get; private set; }
+    public DeviceBuffer OutputVectorBuffer { get; private set; }
+    public DeviceBuffer AddedCoefficientsBuffer { get; private set; }
     public CommandList CommandList { get; private set; }
     public Shader Shader { get; private set; }
     public ResourceLayout InputVectorLayout { get; private set; }
     public ResourceSet ResourceSet { get; private set; }
     public Pipeline Pipeline { get; private set; }
+    public GpuDataAccess<float> InputVectorAccess { get; }
 
-    public Vector Compute(Vector input){
+    public void InitResources()
+    {
+        CreateDeviceResources(Init.Factory);
+        CreateResourceLayouts(Init.Factory);
+        CreatePipelines(Init.Factory);
+        CreateResourceSets(Init.Factory);
+    }
+    public Vector Compute(Vector input, float DiffusionCoefficient, float DiffusionTheta){
         Init.GraphicsDevice.UpdateBuffer(InputVectorBuffer,0,input.ToArray());
+        Init.GraphicsDevice.UpdateBuffer(OutputVectorBuffer,0,new byte[OutputVectorBuffer.SizeInBytes]);
+        Init.GraphicsDevice.UpdateBuffer(AddedCoefficientsBuffer,0,new float[4]);
+        Init.GraphicsDevice.UpdateBuffer(Init.DataInformationBuffer,2*sizeof(int),new float[]{DiffusionCoefficient,DiffusionTheta});
+        
         CommandList.Begin();
         CommandList.SetPipeline(Pipeline);
         CommandList.SetComputeResourceSet(0,Init.ResourceSet);
@@ -36,11 +52,9 @@ public unsafe class Diffusor : IDataOperation
         CommandList.End();
         Init.GraphicsDevice.SubmitCommands(CommandList);
         Init.GraphicsDevice.WaitForIdle();
-        var map = Init.GraphicsDevice.Map(InputVectorBuffer,MapMode.Read);
-        var ptr = (float*)map.Data;
         var result = input.Clone();
         input.MapIndexed((index,value)=>{
-            return ptr[index];
+            return InputVectorAccess[index];
         },result);
         return (Vector)result;
     }
@@ -56,7 +70,20 @@ public unsafe class Diffusor : IDataOperation
                 structureByteStride: (uint)sizeof(float)
             )
         );
-        
+        OutputVectorBuffer = factory.CreateBuffer(
+            new(
+                sizeInBytes:         (uint)(size),
+                usage:               BufferUsage.StructuredBufferReadWrite,
+                structureByteStride: (uint)sizeof(float)
+            )
+        );
+        AddedCoefficientsBuffer = factory.CreateBuffer(
+            new(
+                sizeInBytes:         16,
+                usage:               BufferUsage.StructuredBufferReadWrite,
+                structureByteStride: (uint)sizeof(float)
+            )
+        );
         CommandList = factory.CreateCommandList(new CommandListDescription());
         Shader = factory.CreateFromSpirv(
             new ShaderDescription(
@@ -76,7 +103,9 @@ public unsafe class Diffusor : IDataOperation
     {
         InputVectorLayout = factory.CreateResourceLayout(
             new ResourceLayoutDescription(
-                new ResourceLayoutElementDescription("InputVector",ResourceKind.StructuredBufferReadWrite,ShaderStages.Compute)
+                new ResourceLayoutElementDescription("Input",ResourceKind.StructuredBufferReadWrite,ShaderStages.Compute),
+                new ResourceLayoutElementDescription("Output",ResourceKind.StructuredBufferReadWrite,ShaderStages.Compute),
+                new ResourceLayoutElementDescription("AddedCoefficients",ResourceKind.StructuredBufferReadWrite,ShaderStages.Compute)
             )
         );
     }
@@ -85,7 +114,7 @@ public unsafe class Diffusor : IDataOperation
     {
         ResourceSet =  factory.CreateResourceSet(
             new ResourceSetDescription(
-                InputVectorLayout,InputVectorBuffer
+                InputVectorLayout,InputVectorBuffer, OutputVectorBuffer, AddedCoefficientsBuffer
             )
         );
     }

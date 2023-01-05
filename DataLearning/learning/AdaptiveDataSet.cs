@@ -56,15 +56,38 @@ public class AdaptiveDataSet
         });
         DataLearning.NormalizeCoordinates(ClusterOutput(data[0].Input));
     }
-    public void ClusterByDescending(Func<Vector,Vector> ClusterInput, Func<Vector,Vector> ClusterOutput, float StartDiffusionCoefficient, float EndDiffusionCoefficient, int iterationsPerDescending = 1){
-        var original = this.DataLearning.DiffusionCoefficient;
-        DataLearning.DiffusionCoefficient = StartDiffusionCoefficient;
-        while(DataLearning.DiffusionCoefficient>=EndDiffusionCoefficient){
-            for(int i = 0;i<iterationsPerDescending;i++)
-            Cluster(ClusterInput,ClusterOutput);
-            DataLearning.DiffusionCoefficient-=1;
+    public void SetClusterInputToOutput(Func<Vector,Vector> ClusterInput, Func<Vector,Vector> ClusterOutput,float shiftCoefficient)
+    {
+        var input = ClusterInput(DataSet.Data[0].Input);
+        var output = ClusterOutput(DataSet.Data[0].Input);
+        var inputSize = input.Count(x=>x<-1);
+        foreach(var d in DataSet.Data){
+            var randomShift = Enumerable.Range(0,inputSize).Select(x=>(Random.Shared.NextSingle()-0.5f)*2*shiftCoefficient);
+            var toAdd = d.Input.Where((value,index)=>output[index]<-1);
+            var coeffEnumer = randomShift.GetEnumerator();
+            var addEnumer = toAdd.GetEnumerator();
+            for(int i = 0;i<d.Input.Count;i++){
+                if(input[i]<-1){
+                    coeffEnumer.MoveNext();
+                    addEnumer.MoveNext();
+                    d.Input[i] = coeffEnumer.Current + addEnumer.Current;
+                }
+            }
         }
-        DataLearning.DiffusionCoefficient = original;
+        DataLearning.NormalizeCoordinates(output);
+    }
+    public void ClusterBySequence(Func<Vector,Vector> ClusterInput, Func<Vector,Vector> ClusterOutput, float StartDiffusionCoefficient){
+        var originalDiffCoefficient = DataLearning.DiffusionCoefficient;
+        DataLearning.DiffusionCoefficient=StartDiffusionCoefficient;
+        Cluster(ClusterInput,ClusterOutput);
+        Cluster(ClusterInput,ClusterOutput);
+        Cluster(ClusterInput,ClusterOutput);
+        DataLearning.DiffusionCoefficient=StartDiffusionCoefficient-2;
+        Cluster(ClusterInput,ClusterOutput);
+        Cluster(ClusterInput,ClusterOutput);
+        DataLearning.DiffusionCoefficient=StartDiffusionCoefficient-4;
+        Cluster(ClusterInput,ClusterOutput);
+        DataLearning.DiffusionCoefficient = originalDiffCoefficient;
     }
     /// <summary>
     /// Restores input vector with missing values by predicting them <br/>

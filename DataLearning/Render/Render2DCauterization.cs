@@ -84,6 +84,10 @@ public class Render2DCauterization : Render
         {
             ShufflePositions();
         }
+        if (e.Key == Key.Y)
+        {
+            AdaptiveDataSet.SetClusterInputToOutput(ClusterInput,ClusterOutput,0.05f);
+        }
         if (e.Key == Key.W)
         {
             Task.Run(() =>
@@ -101,15 +105,7 @@ public class Render2DCauterization : Render
             {
                 if (clustering) return;
                 clustering = true;
-                AdaptiveDataSet.DataLearning.DiffusionCoefficient=10;
-                AdaptiveDataSet.Cluster(ClusterInput,ClusterOutput);
-                AdaptiveDataSet.Cluster(ClusterInput,ClusterOutput);
-                AdaptiveDataSet.Cluster(ClusterInput,ClusterOutput);
-                AdaptiveDataSet.DataLearning.DiffusionCoefficient=8;
-                AdaptiveDataSet.Cluster(ClusterInput,ClusterOutput);
-                AdaptiveDataSet.Cluster(ClusterInput,ClusterOutput);
-                AdaptiveDataSet.DataLearning.DiffusionCoefficient=6;
-                AdaptiveDataSet.Cluster(ClusterInput,ClusterOutput);
+                AdaptiveDataSet.ClusterBySequence(ClusterInput,ClusterOutput,10);
                 clustering = false;
             });
         }

@@ -4,7 +4,6 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Veldrid;
-//test this class in closed separated test
 public unsafe class GpuDataAccess<T> : IDataAccess<T>, IDisposable
 where T : unmanaged
 {
@@ -50,7 +49,7 @@ where T : unmanaged
     DeviceBuffer StagingBuffer { get; }
     GraphicsDevice GD { get; }
 
-    public T[] this[Range range]
+    public ReadOnlySpan<T> this[Range range]
     {
         get
         {

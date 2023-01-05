@@ -1,6 +1,73 @@
 #version 450
 
-layout(set = 0, binding = 0) buffer InputBuffer
+layout(set = 0, binding = 0) buffer Vectors
 {
-    float _input[];
+    float VectorsBuffer[];
 };
+layout(set = 0, binding = 1) buffer Indices{
+    int IndicesBuffer[];
+};
+
+layout(set = 0, binding = 2) uniform DataInformation{
+    int MaxVectorsCount;
+    int VectorSize;
+    float DiffusionCoefficient;
+    float DiffusionTheta;
+};
+
+layout(set = 1, binding = 0) buffer Input{
+    float InputVector[];
+};
+layout(set = 1, binding = 1) buffer Output{
+    float OutputVector[];
+};
+layout(set = 1, binding = 2) buffer AddedCoefficients{
+    float Added[];
+}
+
+
+int GetByteFromInt(int value, int pos){
+    return (value<<((3-pos)*8))>>24;
+}
+int SetByteToInt(int value, int pos, int byteValue){
+    int result = 0;
+    for(int i = 3;i>=0;i--){
+        if(pos==i)
+            result+=byteValue;
+        else
+            result+=GetByteFromInt(value,i);
+        if(i!=0)
+        result<<=8;
+    }
+    return result;
+}
+bool IsFree(int index){
+    int shift = index/4;
+    int position = index%4;
+    return GetByteFromInt(IndicesBuffer[shift],position)==0;
+}
+
+float DistanceToInput(int index){
+    index = index*VectorSize;
+    float dist = 0.;
+    float holder = 0.;
+    for(int i = 0;i<VectorSize;i++){
+        if(VectorsBuffer[index+i]<-1 || InputVector[i]<-1) continue;
+        holder = VectorsBuffer[index+i]-InputVector[i];
+        dist+=holder*holder;
+    }
+    return sqrt(dist);
+}
+float ActivationFunction(float distSquared)
+{
+    return 1 / (distSquared * distSquared);
+}
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+void main(){
+    uint index = gl_GlobalInvocationID.x;
+    float dist = pow(DistanceToInput(index),DiffusionCoefficient);
+    dist = ActivationFunction(max(dist,DiffusionTheta));
+    Added[0] += dist;
+
+}

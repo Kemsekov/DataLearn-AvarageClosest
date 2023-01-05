@@ -1,3 +1,5 @@
+using System.IO;
+
 public class GpuDataLearning : IDataLearning, IDisposable
 {
     public GpuDataLearning(int inputVectorLength, int maxVectorsCount){
@@ -8,7 +10,7 @@ public class GpuDataLearning : IDataLearning, IDisposable
 
         //each of following classes will have full access to vector data
         //stored in memory and will update/change it
-        this.Diffusor = new Diffusor(Init,"learning/GPU/shaders/diffuse.comp");
+        this.Diffusor = new Diffusor(Init,File.ReadAllText("learning/GPU/shaders/diffuse.comp"));
         // this.ErrorDiffusor = new ErrorDiffusor(Init);
         // this.NClosestDiffusor = new NClosestDiffusor(Init);
         // this.ClosestGetter = new ClosestGetter(Init);
@@ -25,7 +27,7 @@ public class GpuDataLearning : IDataLearning, IDisposable
 
     public Vector Diffuse(Vector input)
     {
-        return Diffusor.Compute(input);
+        return Diffusor.Compute(input,1,1);
     }
 
     public void DiffuseError(Vector input, Vector error)

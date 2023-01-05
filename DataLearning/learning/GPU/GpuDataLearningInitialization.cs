@@ -7,8 +7,7 @@ using Veldrid.Utilities;
 
 public class GpuDataLearningInitialization : ApplicationBase
 {
-    public DeviceBuffer MaxVectorsCountBuffer;
-    public DeviceBuffer VectorSizeBuffer;
+    public DeviceBuffer DataInformationBuffer;
     public DeviceBuffer VectorDataBuffer;
     public DeviceBuffer IndicesDataBuffer;
     public CommandList CommandList;
@@ -25,8 +24,8 @@ public class GpuDataLearningInitialization : ApplicationBase
         this.MaxVectorsCount = maxVectorsCount;
         this.VectorSize = vectorSize;
         InitResources();
-        GraphicsDevice.UpdateBuffer(MaxVectorsCountBuffer,0,maxVectorsCount);
-        GraphicsDevice.UpdateBuffer(VectorSizeBuffer,0,vectorSize);
+        GraphicsDevice.UpdateBuffer(DataInformationBuffer,0,new int[]{maxVectorsCount, vectorSize,0,0});
+        GraphicsDevice.UpdateBuffer(IndicesDataBuffer,0,new byte[maxVectorsCount]);
         StorageBuffer = new GpuDataAccess<float>(VectorDataBuffer,GraphicsDevice,Factory);
         IndicesBuffer = new GpuDataAccess<byte>(IndicesDataBuffer,GraphicsDevice,Factory);
     }
@@ -56,15 +55,9 @@ public class GpuDataLearningInitialization : ApplicationBase
             )
         );
 
-        MaxVectorsCountBuffer = factory.CreateBuffer(
+        DataInformationBuffer = factory.CreateBuffer(
             new(
-                sizeInBytes: sizeof(int),
-                BufferUsage.UniformBuffer
-            )
-        );
-        VectorSizeBuffer = factory.CreateBuffer(
-            new(
-                sizeInBytes: sizeof(int),
+                sizeInBytes: (uint)(sizeof(int)*4),
                 BufferUsage.UniformBuffer
             )
         );
@@ -79,8 +72,9 @@ public class GpuDataLearningInitialization : ApplicationBase
     {
         Layout = factory.CreateResourceLayout(
             new ResourceLayoutDescription(
-                new ResourceLayoutElementDescription("VectorsBuffer",ResourceKind.StructuredBufferReadWrite,ShaderStages.Compute),
-                new ResourceLayoutElementDescription("IndicesBuffer",ResourceKind.StructuredBufferReadWrite,ShaderStages.Compute)
+                new ResourceLayoutElementDescription("Vectors",ResourceKind.StructuredBufferReadWrite,ShaderStages.Compute),
+                new ResourceLayoutElementDescription("Indices",ResourceKind.StructuredBufferReadWrite,ShaderStages.Compute),
+                new ResourceLayoutElementDescription("DataInformation",ResourceKind.UniformBuffer,ShaderStages.Compute)
             )
         );
     }
@@ -89,7 +83,7 @@ public class GpuDataLearningInitialization : ApplicationBase
     {
         ResourceSet =  factory.CreateResourceSet(
             new ResourceSetDescription(
-                Layout,VectorDataBuffer,IndicesDataBuffer
+                Layout,VectorDataBuffer,IndicesDataBuffer,DataInformationBuffer
             )
         );
     }

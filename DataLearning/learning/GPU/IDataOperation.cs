@@ -10,4 +10,5 @@ public interface IDataOperation
     void CreatePipelines(DisposeCollectorResourceFactory factory);
     void CreateResourceLayouts(DisposeCollectorResourceFactory factory);
     void CreateResourceSets(DisposeCollectorResourceFactory factory);
+    
 }

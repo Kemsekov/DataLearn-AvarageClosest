@@ -27,7 +27,7 @@ where T : unmanaged, System.IEquatable<T>, System.IFormattable
     {
         if(disposed)
             throw new ObjectDisposedException("Could not access data of disposed vector");
-        return DataStorage.Get(StartIndex)[index];
+        return DataStorage[StartIndex][index];
     }
     public override void At(int index, T value)
     {

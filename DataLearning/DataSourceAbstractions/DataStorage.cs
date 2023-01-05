@@ -16,12 +16,14 @@ where T : unmanaged
         this.ElementSize = storage.Length/indices.Length;
         Indices.Fill(0);
     }
-    public ReadOnlySpan<T> Get(int index)   
+    public ReadOnlySpan<T> this[int index]   
     {
+        get{
         var shift = index*ElementSize;
         if (IsFree(index))
             throw new KeyNotFoundException($"There is no element under index {index}");
         return Storage[shift..(shift+ElementSize)];
+        }
     }
     public void Set(int index, int position, T element){
         Storage[index*ElementSize+position] = element;
