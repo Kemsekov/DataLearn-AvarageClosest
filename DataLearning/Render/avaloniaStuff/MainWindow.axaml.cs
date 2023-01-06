@@ -11,6 +11,7 @@ using System.Diagnostics;
 using Avalonia.Input;
 using Newtonsoft.Json.Linq;
 using System.IO;
+using Avalonia.Media.Imaging;
 
 namespace Test;
 public partial class MainWindow : Window

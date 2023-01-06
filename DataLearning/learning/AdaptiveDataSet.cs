@@ -56,25 +56,21 @@ public class AdaptiveDataSet
         });
         DataLearning.NormalizeCoordinates(ClusterOutput(data[0].Input));
     }
-    public void SetClusterInputToOutput(Func<Vector,Vector> ClusterInput, Func<Vector,Vector> ClusterOutput,float shiftCoefficient)
-    {
-        var input = ClusterInput(DataSet.Data[0].Input);
-        var output = ClusterOutput(DataSet.Data[0].Input);
-        var inputSize = input.Count(x=>x<-1);
-        foreach(var d in DataSet.Data){
-            var randomShift = Enumerable.Range(0,inputSize).Select(x=>(Random.Shared.NextSingle()-0.5f)*2*shiftCoefficient);
-            var toAdd = d.Input.Where((value,index)=>output[index]<-1);
-            var coeffEnumer = randomShift.GetEnumerator();
-            var addEnumer = toAdd.GetEnumerator();
-            for(int i = 0;i<d.Input.Count;i++){
-                if(input[i]<-1){
-                    coeffEnumer.MoveNext();
-                    addEnumer.MoveNext();
-                    d.Input[i] = coeffEnumer.Current + addEnumer.Current;
-                }
+    public Vector Convolve(Vector input, int outputSize, int convolveSize = 0){
+        var inputSize = input.Count;
+        var batchSize = inputSize/outputSize;
+        var result = new DenseVector(new float[outputSize]);
+        for(int i = 0;i<outputSize;i++){
+            float value = 0;
+            for(int b = 0;b<batchSize+convolveSize;b++){
+                var pos = i*batchSize+b-convolveSize;
+                pos = Math.Min(pos,inputSize);
+                pos = Math.Max(pos,0);
+                value+=input[pos];
             }
+            result[i] = value;
         }
-        DataLearning.NormalizeCoordinates(output);
+        return result;
     }
     public void ClusterBySequence(Func<Vector,Vector> ClusterInput, Func<Vector,Vector> ClusterOutput, float StartDiffusionCoefficient){
         var originalDiffCoefficient = DataLearning.DiffusionCoefficient;

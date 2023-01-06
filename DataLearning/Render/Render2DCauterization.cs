@@ -15,6 +15,7 @@ public class Render2DCauterization : Render
         x[2] = -2;
         x[3] = -2;
         x[4] = -2;
+        x[5] = -2;
         return x;
     };
 
@@ -34,6 +35,7 @@ public class Render2DCauterization : Render
         x[2] = -2;
         x[3] = -2;
         x[4] = -2;
+        x[5] = -2;
         return x;
     };
 
@@ -47,12 +49,15 @@ public class Render2DCauterization : Render
         var drawer = new CanvasShapeDrawer(Canvas);
         this.CanvasDrawer = drawer;
         this.ApproximationSize = 40 * 40;
-        this.InputVectorLength = 5;
+        this.InputVectorLength = 6;
         this.DataSet = new DataSet(InputVectorLength);
         this.DataLearning = new DataLearning(DataSet);
         DataLearning.DiffusionTheta = 0.000001f;
         this.Approximation = DataHelper.GetApproximationSet(ApproximationSize, 2, 1, new DenseVector(new float[2]));
         ExpandApproximationSet();
+        foreach(var d in Approximation.Data){
+            d.Input[5] = 1;
+        }
         this.AdaptiveDataSet = new AdaptiveDataSet(DataLearning, 100);
         var n1 = Random.Shared.Next(256);
         var n2 = Random.Shared.Next(256);
@@ -65,7 +70,8 @@ public class Render2DCauterization : Render
         var n1 = Random.Shared.Next(256);
         var n2 = Random.Shared.Next(256);
         var n3 = Random.Shared.Next(256);
-        var color = Color.FromArgb(n1, n2, n3);
+        var n4 = Random.Shared.Next(256);
+        var color = Color.FromArgb(n4, n1, n2, n3);
         return color;
     }
     public override void OnKeyDown(object? sender, KeyEventArgs e)
@@ -86,7 +92,13 @@ public class Render2DCauterization : Render
         }
         if (e.Key == Key.Y)
         {
-            AdaptiveDataSet.SetClusterInputToOutput(ClusterInput,ClusterOutput,0.05f);
+            // AdaptiveDataSet.SetClusterInputToOutput(ClusterInput,ClusterOutput,0f);
+            foreach(var d in DataSet.Data){
+                var startCoordinates = AdaptiveDataSet.Convolve((Vector)d.Input.SubVector(2,4),2,((int)DataLearning.DiffusionCoefficient));
+                d.Input.SetSubVector(0,2,startCoordinates);
+            }
+            DataLearning.NormalizeCoordinates(ClusterOutput(new Data(new float[InputVectorLength]).Input));
+
         }
         if (e.Key == Key.W)
         {
@@ -139,6 +151,7 @@ public class Render2DCauterization : Render
             arr[2] = color.R * 1.0f / 255;
             arr[3] = color.G * 1.0f / 255;
             arr[4] = color.B * 1.0f / 255;
+            arr[5] = color.A * 1.0f / 255;
             var v = new DenseVector(arr);
             return v;
         });
@@ -169,16 +182,19 @@ public class Render2DCauterization : Render
         var n1 = Random.Shared.NextSingle() * percent + 1f - percent / 2;
         var n2 = Random.Shared.NextSingle() * percent + 1f - percent / 2;
         var n3 = Random.Shared.NextSingle() * percent + 1f - percent / 2;
+        var n4 = Random.Shared.NextSingle() * percent + 1f - percent / 2;
 
         var r = (int)(color.R * n1);
         var g = (int)(color.G * n2);
         var b = (int)(color.B * n3);
+        var a = (int)(color.A * n4);
 
         r = bound(r);
         g = bound(g);
         b = bound(b);
+        a = bound(a);
 
-        return Color.FromArgb(r, g, b);
+        return Color.FromArgb(a, r, g, b);
     }
 
     void DrawData(IDataSet dataSet, Func<Vector, Color> getColor, int size = 10)
@@ -208,6 +224,7 @@ public class Render2DCauterization : Render
             x[2] = -2;
             x[3] = -2;
             x[4] = -2;
+            x[5] = -2;
             return x;
         };
         var pos = e.GetPosition(Canvas);
@@ -217,6 +234,7 @@ public class Render2DCauterization : Render
         arr[2]=(float)(ChosenColor.R) / 255; 
         arr[3]=(float)(ChosenColor.G) / 255; 
         arr[4]=(float)(ChosenColor.B) / 255;
+        arr[5]=(float)(ChosenColor.A) / 255;
         var input = new DenseVector(arr);
         var toAdd = new Data() { Input = input };
         lock (DataLearning)
@@ -226,7 +244,7 @@ public class Render2DCauterization : Render
     }
     public override async void RenderStuff()
     {
-        Func<Vector, Color> colorPick = x => Color.FromArgb((int)Math.Abs(255 * x[2] % 256), (int)Math.Abs(255 * x[3] % 256), (int)Math.Abs(255 * x[4] % 256));
+        Func<Vector, Color> colorPick = x => Color.FromArgb((int)Math.Abs(255 * x[5] % 256),(int)Math.Abs(255 * x[2] % 256), (int)Math.Abs(255 * x[3] % 256), (int)Math.Abs(255 * x[4] % 256));
         while (true)
         {
             CanvasDrawer.Clear(System.Drawing.Color.Empty);
