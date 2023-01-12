@@ -133,7 +133,7 @@ public class Render2DCauterization : Render
                 {
 
                     VectorMask mask = new((x, index) => index > 1);
-                    var clusters = AdaptiveDataSet.GetClustersBySpanningTree(5, mask);
+                    var clusters = AdaptiveDataSet.GetClustersBySpanningTree(20, skipIterations:0, mask).FirstOrDefault();
                     if (clusters is null)
                     {
                         return;

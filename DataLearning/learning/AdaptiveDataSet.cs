@@ -66,18 +66,28 @@ public class AdaptiveDataSet
     /// 3) Returning connected components of a graph<br/>
     /// </summary>
     /// <returns>With each iteration the clusters count is increasing by one</returns>
-    public IList<Cluster> GetClustersBySpanningTree(int connectToClosestCount, VectorMask mask)
+    public IEnumerable<IList<Cluster>> GetClustersBySpanningTree(int connectToClosestCount, int skipIterations, VectorMask mask)
     {
         if (DataSet.Data.Count == 0)
         {
-            return new List<Cluster>();
+            yield break;
         }
         var g = new DataGraph(new DataConfiguration(mask), DataSet.Data);
         g.Do.ConnectToClosest(connectToClosestCount, (d1, d2) => DataHelper.Distance(d1.Data.Input, d2.Data.Input, mask));
-        var forest = g.Do.FindSpanningForestKruskal().Forest.OrderBy(x => -x.Weight).ToList();
+        List<DataEdge> forest = new();
+        if(skipIterations>0){
+            forest = g.Do.FindSpanningForestKruskal().Forest.OrderBy(x => -x.Weight).ToList();
+        }
         g.SetSources(edges: forest);
         using var component = g.Do.FindComponents();
-        return component.Components.Select(c => new Cluster(c.Select(x => x.Data).ToList())).ToList();
+        foreach (var toRemove in forest)
+        {
+            g.Edges.Remove(toRemove);
+            if (skipIterations-- <= 0)
+            {
+                yield return component.Components.Select(c => new Cluster(c.Select(x => x.Data).ToList())).ToList();
+            }
+        }
     }
 
     public void ClusterBySequence(Func<Vector, Vector> ClusterInput, Func<Vector, Vector> ClusterOutput, float StartDiffusionCoefficient)
