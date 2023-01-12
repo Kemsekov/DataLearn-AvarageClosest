@@ -78,6 +78,8 @@ public class AdaptiveDataSet
         if(skipIterations>0){
             forest = g.Do.FindSpanningForestKruskal().Forest.OrderBy(x => -x.Weight).ToList();
         }
+        else
+            forest = g.Do.FindSpanningForestKruskal().Forest.ToList();
         g.SetSources(edges: forest);
         using var component = g.Do.FindComponents();
         foreach (var toRemove in forest)

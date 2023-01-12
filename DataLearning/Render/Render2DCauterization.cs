@@ -131,9 +131,8 @@ public class Render2DCauterization : Render
                 clustering = true;
                 try
                 {
-
                     VectorMask mask = new((x, index) => index > 1);
-                    var clusters = AdaptiveDataSet.GetClustersBySpanningTree(20, skipIterations:0, mask).FirstOrDefault();
+                    var clusters = AdaptiveDataSet.GetClustersBySpanningTree(10, skipIterations:0, mask).FirstOrDefault();
                     if (clusters is null)
                     {
                         return;
@@ -147,7 +146,6 @@ public class Render2DCauterization : Render
                     var tsp = g.Do.TspCheapestLinkOnEdgeCost(x => x.Weight, connect);
                     tsp = g.Do.TspOpt2(tsp.Tour, tsp.TourCost, distance);
                     clusters = tsp.Tour.Select(x => x.Data).Cast<Cluster>().ToList();
-                    var xStep = 1.0f / clusters.Count;
                     var xStart = 0.0f;
 
                     foreach (var c in clusters.SkipLast(1))
@@ -156,8 +154,10 @@ public class Render2DCauterization : Render
                         {
                             e.Input[0] = xStart;
                         }
-                        xStart += xStep;
+                        xStart += 1;
                     }
+                    DataLearning.NormalizeCoordinates(ClusterOutput(new Data(new float[InputVectorLength]).Input));
+
                 }
                 catch (Exception e)
                 {
