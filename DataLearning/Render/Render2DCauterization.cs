@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Input;
+using GraphSharp.Graphs;
 using MathNet.Numerics.LinearAlgebra.Single;
 public class Render2DCauterization : Render
 {
@@ -20,7 +21,7 @@ public class Render2DCauterization : Render
     };
 
     public int IterationsCount { get; private set; }
-    public int ClusterSetSize { get; private set; } = 600;
+    public int ClusterSetSize { get; private set; } = 1000;
 
     public Func<Vector, Vector> ClusterInput = (Vector x) =>
         {
@@ -51,11 +52,12 @@ public class Render2DCauterization : Render
         this.ApproximationSize = 40 * 40;
         this.InputVectorLength = 6;
         this.DataSet = new DataSet(InputVectorLength);
-        this.DataLearning = new DataLearning(DataSet);
+        this.DataLearning = new DataLearning(DataSet, new((x, index) => x >= -1));
         DataLearning.DiffusionTheta = 0.000001f;
         this.Approximation = DataHelper.GetApproximationSet(ApproximationSize, 2, 1, new DenseVector(new float[2]));
         ExpandApproximationSet();
-        foreach(var d in Approximation.Data){
+        foreach (var d in Approximation.Data)
+        {
             d.Input[5] = 1;
         }
         this.AdaptiveDataSet = new AdaptiveDataSet(DataLearning, 100);
@@ -81,7 +83,7 @@ public class Render2DCauterization : Render
             ChosenColor = RandomColor();
         }
         if (e.Key == Key.Q)
-            ChosenColor = ShiftColor(ChosenColor,0.3f);
+            ChosenColor = ShiftColor(ChosenColor, 0.3f);
         if (e.Key == Key.A)
         {
             FillSpace(ClusterSetSize);
@@ -92,10 +94,10 @@ public class Render2DCauterization : Render
         }
         if (e.Key == Key.Y)
         {
-            // AdaptiveDataSet.SetClusterInputToOutput(ClusterInput,ClusterOutput,0f);
-            foreach(var d in DataSet.Data){
-                var startCoordinates = AdaptiveDataSet.Convolve((Vector)d.Input.SubVector(2,4),2,((int)DataLearning.DiffusionCoefficient));
-                d.Input.SetSubVector(0,2,startCoordinates);
+            foreach (var d in DataSet.Data)
+            {
+                var startCoordinates = DataHelper.Convolve((Vector)d.Input.SubVector(2, 4), 2, ((int)DataLearning.DiffusionCoefficient));
+                d.Input.SetSubVector(0, 2, startCoordinates);
             }
             DataLearning.NormalizeCoordinates(ClusterOutput(new Data(new float[InputVectorLength]).Input));
 
@@ -117,10 +119,63 @@ public class Render2DCauterization : Render
             {
                 if (clustering) return;
                 clustering = true;
-                AdaptiveDataSet.ClusterBySequence(ClusterInput,ClusterOutput,10);
+                AdaptiveDataSet.ClusterBySequence(ClusterInput, ClusterOutput, 10);
                 clustering = false;
             });
         }
+        if (e.Key == Key.U)
+        {
+            Task.Run(() =>
+            {
+                if (clustering) return;
+                clustering = true;
+                try
+                {
+
+                    VectorMask mask = new((x, index) => index > 1);
+                    var clusters = AdaptiveDataSet.GetClustersBySpanningTree(5, mask);
+                    if (clusters is null)
+                    {
+                        return;
+                    }
+                    var g = new DataGraph(new DataConfiguration(mask), clusters);
+                    var distance = (DataNode n1, DataNode n2) => (double)DataHelper.Distance(ClusterInput(n1.Data.Input), n2.Data.Input, mask);
+                    var connect = (IGraph<DataNode, DataEdge> g) =>
+                    {
+                        g.Do.ConnectToClosest(10, distance);
+                    };
+                    var tsp = g.Do.TspCheapestLinkOnEdgeCost(x => x.Weight, connect);
+                    tsp = g.Do.TspOpt2(tsp.Tour, tsp.TourCost, distance);
+                    clusters = tsp.Tour.Select(x => x.Data).Cast<Cluster>().ToList();
+                    var xStep = 1.0f / clusters.Count;
+                    var xStart = 0.0f;
+
+                    foreach (var c in clusters.SkipLast(1))
+                    {
+                        foreach (var e in c.Elements)
+                        {
+                            e.Input[0] = xStart;
+                        }
+                        xStart += xStep;
+                    }
+                }
+                catch (Exception e)
+                {
+                    System.Console.WriteLine(e.Message);
+                }
+                finally
+                {
+                    clustering = false;
+                }
+            });
+        }
+        if (e.Key == Key.N){
+            foreach(var v in DataSet.Data){
+                v.Input[0] = 0.5f;
+                v.Input[1] = 0.5f;
+            }
+        }
+        
         base.OnKeyDown(sender, e);
     }
 
@@ -231,10 +286,10 @@ public class Render2DCauterization : Render
         var arr = new float[InputVectorLength];
         arr[0] = (float)pos.X / WindowSize;
         arr[1] = (float)pos.Y / WindowSize;
-        arr[2]=(float)(ChosenColor.R) / 255; 
-        arr[3]=(float)(ChosenColor.G) / 255; 
-        arr[4]=(float)(ChosenColor.B) / 255;
-        arr[5]=(float)(ChosenColor.A) / 255;
+        arr[2] = (float)(ChosenColor.R) / 255;
+        arr[3] = (float)(ChosenColor.G) / 255;
+        arr[4] = (float)(ChosenColor.B) / 255;
+        arr[5] = (float)(ChosenColor.A) / 255;
         var input = new DenseVector(arr);
         var toAdd = new Data() { Input = input };
         lock (DataLearning)
@@ -244,7 +299,7 @@ public class Render2DCauterization : Render
     }
     public override async void RenderStuff()
     {
-        Func<Vector, Color> colorPick = x => Color.FromArgb((int)Math.Abs(255 * x[5] % 256),(int)Math.Abs(255 * x[2] % 256), (int)Math.Abs(255 * x[3] % 256), (int)Math.Abs(255 * x[4] % 256));
+        Func<Vector, Color> colorPick = x => Color.FromArgb((int)Math.Abs(255 * x[5] % 256), (int)Math.Abs(255 * x[2] % 256), (int)Math.Abs(255 * x[3] % 256), (int)Math.Abs(255 * x[4] % 256));
         while (true)
         {
             CanvasDrawer.Clear(System.Drawing.Color.Empty);

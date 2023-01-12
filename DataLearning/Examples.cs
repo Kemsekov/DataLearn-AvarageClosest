@@ -104,7 +104,7 @@ public class Examples
         var normalizer = GetNormalizer(trainData);
         var inputLength = trainData[0].Count;
 
-        var adaptiveDataSet = new AdaptiveDataSet(inputLength, adaptiveDataSetLength);
+        var adaptiveDataSet = new AdaptiveDataSet(inputLength, adaptiveDataSetLength,new VectorMask((x,index)=>x>=-1));
         
         // adaptiveDataSet.Distance = (x1,x2)=>((float)((x1.Input-x2.Input).L2Norm()+(x1.Output-x2.Output).L2Norm()));
         

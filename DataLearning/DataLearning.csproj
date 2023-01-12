@@ -8,22 +8,25 @@
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
   </PropertyGroup>
   <ItemGroup>
-    <None Remove=".gitignore"/>
+    <None Remove=".gitignore" />
   </ItemGroup>
   <ItemGroup>
-    <TrimmableAssembly Include="Avalonia.Themes.Fluent"/>
-    <TrimmableAssembly Include="Avalonia.Themes.Default"/>
+    <TrimmableAssembly Include="Avalonia.Themes.Fluent" />
+    <TrimmableAssembly Include="Avalonia.Themes.Default" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="0.10.18"/>
-    <PackageReference Include="Avalonia.Desktop" Version="0.10.18"/>
-    <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="0.10.18"/>
-    <PackageReference Include="XamlNameReferenceGenerator" Version="1.5.1"/>
-    <PackageReference Include="MathNet.Numerics" Version="5.0.0"/>
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.2"/>
-    <PackageReference Include="Veldrid" Version="4.9.0-beta2"/>
-    <PackageReference Include="Veldrid.StartupUtilities" Version="4.9.0-beta2"/>
-    <PackageReference Include="Veldrid.Utilities" Version="4.9.0-beta2"/>
-    <PackageReference Include="Veldrid.SPIRV" Version="1.0.15"/>
+    <PackageReference Include="Avalonia" Version="0.10.18" />
+    <PackageReference Include="Avalonia.Desktop" Version="0.10.18" />
+    <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="0.10.18" />
+    <PackageReference Include="XamlNameReferenceGenerator" Version="1.5.1" />
+    <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
+    <PackageReference Include="Veldrid" Version="4.9.0-beta2" />
+    <PackageReference Include="Veldrid.StartupUtilities" Version="4.9.0-beta2" />
+    <PackageReference Include="Veldrid.Utilities" Version="4.9.0-beta2" />
+    <PackageReference Include="Veldrid.SPIRV" Version="1.0.15" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\GraphSharp\GraphSharp\GraphSharp.csproj" />
   </ItemGroup>
 </Project>

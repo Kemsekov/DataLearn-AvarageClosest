@@ -82,10 +82,13 @@ public class DataLearning : IDataLearning
     /// </summary>
     public float DiffusionCoefficient{get;set;} = 2;
 
+    private VectorMask mask;
+
     public IDataSet DataSet{get;set;}
 
-    public DataLearning(IDataSet dataSet)
+    public DataLearning(IDataSet dataSet, VectorMask mask)
     {
+        this.mask = mask;
         this.DataSet = dataSet;
     }
     public (IData data, int id) GetClosest(IDataSet dataSet, IData element)
@@ -96,7 +99,7 @@ public class DataLearning : IDataLearning
         Parallel.For(0,dataSet.Data.Count,i=>
         {
             var x = dataSet.Data[i];
-            var dist = DataHelper.Distance(x.Input, element.Input);
+            var dist = DataHelper.Distance(x.Input, element.Input,mask);
             lock(dataSet)
             if (dist < minDist)
             {
@@ -131,7 +134,7 @@ public class DataLearning : IDataLearning
         for (int i = 0; i < data.Data.Count; i++)
         {
             var dt = data.Data[i];
-            distSquared = MathF.Pow(DataHelper.Distance(input, dt.Input), DiffusionCoefficient);
+            distSquared = MathF.Pow(DataHelper.Distance(input, dt.Input,mask), DiffusionCoefficient);
             distSquared = Math.Max(distSquared, DiffusionTheta);
             coeff = ActivationFunction(distSquared);
             addedCoeff += coeff;
@@ -169,7 +172,7 @@ public class DataLearning : IDataLearning
         for (int i = 0; i < data.Data.Count; i++)
         {
             var dt = data.Data[i];
-            distSquared = MathF.Pow(DataHelper.Distance(input, dt.Input), DiffusionCoefficient);
+            distSquared = MathF.Pow(DataHelper.Distance(input, dt.Input,mask), DiffusionCoefficient);
             distSquared = Math.Max(distSquared, DiffusionTheta);
             coeff = ActivationFunction(distSquared);
             OnElementWithCoefficient(dt,coeff);
@@ -213,7 +216,7 @@ public class DataLearning : IDataLearning
     }
     public Vector DiffuseOnNClosest(IDataSet data, Vector input, int n){
         var inputLength = data.InputVectorLength;
-        var mins = data.Data.FindNMinimal(n,x=>DataHelper.Distance(x.Input,input));
+        var mins = data.Data.FindNMinimal(n,x=>DataHelper.Distance(x.Input,input,mask));
         return Diffuse(new DataSet(data.InputVectorLength,mins),input);
     }
 

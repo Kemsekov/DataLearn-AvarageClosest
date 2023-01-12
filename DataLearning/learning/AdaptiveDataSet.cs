@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using GraphSharp.Graphs;
 using MathNet.Numerics.LinearAlgebra.Single;
 
 /// <summary>
@@ -22,13 +23,14 @@ public class AdaptiveDataSet
         this.MaxElements = maxElements;
         this.DataLearning = dataLearning;
     }
-    public AdaptiveDataSet(int inputVectorLength, int maxElements) : this(new DataLearning(new DataSet(inputVectorLength)),maxElements)
+    public AdaptiveDataSet(int inputVectorLength, int maxElements, VectorMask mask) : this(new DataLearning(new DataSet(inputVectorLength), mask), maxElements)
     {
     }
-    public Vector PredictOnNClosest(Vector input,int n){
-        if(DataSet.Data.Count==0) return input;
-        var result = DataLearning.DiffuseOnNClosest(input,n);
-        return FillMissingValues(input,result);
+    public Vector PredictOnNClosest(Vector input, int n)
+    {
+        if (DataSet.Data.Count == 0) return input;
+        var result = DataLearning.DiffuseOnNClosest(input, n);
+        return FillMissingValues(input, result);
     }
     /// <summary>
     /// Clusters close by input elements to be close by output element.
@@ -38,9 +40,10 @@ public class AdaptiveDataSet
     /// </summary>
     /// <param name="ClusterInput"></param>
     /// <param name="ClusterOutput"></param>
-    public void Cluster(Func<Vector,Vector> ClusterInput, Func<Vector,Vector> ClusterOutput){
+    public void Cluster(Func<Vector, Vector> ClusterInput, Func<Vector, Vector> ClusterOutput)
+    {
         var data = DataSet.Data;
-        if(data.Count==0) return;
+        if (data.Count == 0) return;
 
         Parallel.For(0, data.Count, i =>
         {
@@ -56,33 +59,39 @@ public class AdaptiveDataSet
         });
         DataLearning.NormalizeCoordinates(ClusterOutput(data[0].Input));
     }
-    public Vector Convolve(Vector input, int outputSize, int convolveSize = 0){
-        var inputSize = input.Count;
-        var batchSize = inputSize/outputSize;
-        var result = new DenseVector(new float[outputSize]);
-        for(int i = 0;i<outputSize;i++){
-            float value = 0;
-            for(int b = 0;b<batchSize+convolveSize;b++){
-                var pos = i*batchSize+b-convolveSize;
-                pos = Math.Min(pos,inputSize);
-                pos = Math.Max(pos,0);
-                value+=input[pos];
-            }
-            result[i] = value;
+    /// <summary>
+    /// Get clusters from data by<br/>
+    /// 1) Building minimal spanning tree on <see cref="DataHelper.Distance(Vector, Vector)"/> function <br/>
+    /// 2) Repeatedly removing the longest edge in tree from graph <br/>
+    /// 3) Returning connected components of a graph<br/>
+    /// </summary>
+    /// <returns>With each iteration the clusters count is increasing by one</returns>
+    public IList<Cluster> GetClustersBySpanningTree(int connectToClosestCount, VectorMask mask)
+    {
+        if (DataSet.Data.Count == 0)
+        {
+            return new List<Cluster>();
         }
-        return result;
+        var g = new DataGraph(new DataConfiguration(mask), DataSet.Data);
+        g.Do.ConnectToClosest(connectToClosestCount, (d1, d2) => DataHelper.Distance(d1.Data.Input, d2.Data.Input, mask));
+        var forest = g.Do.FindSpanningForestKruskal().Forest.OrderBy(x => -x.Weight).ToList();
+        g.SetSources(edges: forest);
+        using var component = g.Do.FindComponents();
+        return component.Components.Select(c => new Cluster(c.Select(x => x.Data).ToList())).ToList();
     }
-    public void ClusterBySequence(Func<Vector,Vector> ClusterInput, Func<Vector,Vector> ClusterOutput, float StartDiffusionCoefficient){
+
+    public void ClusterBySequence(Func<Vector, Vector> ClusterInput, Func<Vector, Vector> ClusterOutput, float StartDiffusionCoefficient)
+    {
         var originalDiffCoefficient = DataLearning.DiffusionCoefficient;
-        DataLearning.DiffusionCoefficient=StartDiffusionCoefficient;
-        Cluster(ClusterInput,ClusterOutput);
-        Cluster(ClusterInput,ClusterOutput);
-        Cluster(ClusterInput,ClusterOutput);
-        DataLearning.DiffusionCoefficient=StartDiffusionCoefficient-2;
-        Cluster(ClusterInput,ClusterOutput);
-        Cluster(ClusterInput,ClusterOutput);
-        DataLearning.DiffusionCoefficient=StartDiffusionCoefficient-4;
-        Cluster(ClusterInput,ClusterOutput);
+        DataLearning.DiffusionCoefficient = StartDiffusionCoefficient;
+        Cluster(ClusterInput, ClusterOutput);
+        Cluster(ClusterInput, ClusterOutput);
+        Cluster(ClusterInput, ClusterOutput);
+        DataLearning.DiffusionCoefficient = StartDiffusionCoefficient - 2;
+        Cluster(ClusterInput, ClusterOutput);
+        Cluster(ClusterInput, ClusterOutput);
+        DataLearning.DiffusionCoefficient = StartDiffusionCoefficient - 4;
+        Cluster(ClusterInput, ClusterOutput);
         DataLearning.DiffusionCoefficient = originalDiffCoefficient;
     }
     /// <summary>
@@ -98,8 +107,9 @@ public class AdaptiveDataSet
         var result = DataLearning.Diffuse(input);
         return FillMissingValues(input, result);
     }
-    public void DiffuseError(Vector input,Vector error){
-        DataLearning.DiffuseError(input,error);
+    public void DiffuseError(Vector input, Vector error)
+    {
+        DataLearning.DiffuseError(input, error);
     }
     public static Vector FillMissingValues(Vector input, Vector result)
     {
@@ -146,7 +156,8 @@ public class AdaptiveDataSet
     /// <summary>
     /// Adds new element by replacing random element
     /// </summary>
-    public void AddByReplacingRandom(IData element){
+    public void AddByReplacingRandom(IData element)
+    {
         if (DataSet.Data.Count < MaxElements)
         {
             DataSet.Data.Add(element);
@@ -155,12 +166,14 @@ public class AdaptiveDataSet
         var toReplace = Random.Shared.Next(DataSet.Data.Count);
         DataSet.Data[toReplace] = element;
     }
-    Vector CreateMissingValues(Vector vec, float percentOfMissingValues = 0.2f){
-        if(vec.Any(x=>x<-1)) return vec;
+    Vector CreateMissingValues(Vector vec, float percentOfMissingValues = 0.2f)
+    {
+        if (vec.Any(x => x < -1)) return vec;
         var r = new Random();
         var res = vec.Clone();
-        for(int i = 0;i<vec.Count;i++){
-            if(r.NextSingle()<percentOfMissingValues)
+        for (int i = 0; i < vec.Count; i++)
+        {
+            if (r.NextSingle() < percentOfMissingValues)
                 res[i] = -2;
         }
         return (Vector)res;
@@ -171,7 +184,7 @@ public class AdaptiveDataSet
     /// <param name="test">Test data</param>
     /// <param name="getInput">How to get input from data. Note that input must contain missing values(less than -1) for model to do anything useful with it</param>
     /// <returns></returns>
-    public TestPrediction ComputePredictionError(Vector[] test, Func<Vector,IData> getInput)
+    public TestPrediction ComputePredictionError(Vector[] test, Func<Vector, IData> getInput)
     {
         Vector difference = new DenseVector(new float[InputVectorLength]);
         Vector absDifference = new DenseVector(new float[InputVectorLength]);
@@ -203,12 +216,12 @@ public class AdaptiveDataSet
         };
         difference = (Vector)difference.Divide(test.Count());
         absDifference = (Vector)absDifference.Divide(test.Count());
-        return new(difference,absDifference,maxDifference);
+        return new(difference, absDifference, maxDifference);
     }
     /// <summary>
     /// Diffuses <paramref name="dataSet"/> on <paramref name="Approximation"/> dataset.
     /// </summary>
-    public void Predict(IDataSet Approximation,Func<Vector,Vector> getInput)
+    public void Predict(IDataSet Approximation, Func<Vector, Vector> getInput)
     {
         if (DataSet.Data.Count == 0) return;
         Parallel.For(0, Approximation.Data.Count, (i, _) =>
@@ -219,14 +232,14 @@ public class AdaptiveDataSet
             Approximation.Data[i] = approximation;
         });
     }
-    public void PredictOnNClosest(DataSet Approximation,Func<Vector,Vector> getInput, int n)
+    public void PredictOnNClosest(DataSet Approximation, Func<Vector, Vector> getInput, int n)
     {
         if (DataSet.Data.Count == 0) return;
         Parallel.For(0, Approximation.Data.Count, (i, _) =>
         {
             var approximation = Approximation.Data[i];
             var input = getInput(approximation.Input);
-            approximation.Input = PredictOnNClosest(input,n);
+            approximation.Input = PredictOnNClosest(input, n);
             Approximation.Data[i] = approximation;
         });
     }
@@ -238,13 +251,14 @@ public class AdaptiveDataSet
     {
         diff.Map(x => x < 0.01 ? 0 : x, diff);
         bool printed = false;
-        for(int i = 0;i<diff.Count;i++){
+        for (int i = 0; i < diff.Count; i++)
+        {
             var d = diff[i];
-            if(d==0) continue;
+            if (d == 0) continue;
             printed = true;
             System.Console.WriteLine($"{i}\t:\t{d}");
         }
-        if(printed)
+        if (printed)
             System.Console.WriteLine("---------");
     }
 

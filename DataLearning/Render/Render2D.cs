@@ -30,7 +30,7 @@ public class Render2D : Render
         this.ApproximationSize = 40*40;
         this.InputVectorLength = 5;
         this.DataSet = new DataSet(InputVectorLength);
-        this.DataLearning = new DataLearning(DataSet);
+        this.DataLearning = new DataLearning(DataSet, new VectorMask((x,index)=>x>=-1));
         this.Approximation = DataHelper.GetApproximationSet(ApproximationSize,2,1,new DenseVector(new float[2]));
         ExpandApproximationSet();
         

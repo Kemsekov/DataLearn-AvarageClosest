@@ -101,16 +101,32 @@ public class DataHelper
     /// For example for vectors <see langword="(1,2,3,-2)"/> and <see langword="(-2,1,5,-4)"/> <br/>
     /// result will be <see langword="sqrt((2-1)^2+(5-3)^2)"/>
     /// </summary>
-    public static float Distance(Vector n1, Vector n2)
+    public static float Distance(Vector n1, Vector n2, VectorMask mask)
     {
         float distance = 0;
         float holder = 0;
         var len = Math.Min(n1.Count,n2.Count);
         for(int i = 0;i<len;i++){
-            if(n1[i]<-1 || n2[i]<-1) continue;
+            if(!mask.IsAllowed(n1[i],i) || !mask.IsAllowed(n2[i],i)) continue;
             holder = n1[i]-n2[i];
             distance+=holder*holder;
         }
         return MathF.Sqrt(distance);
+    }
+    public static Vector Convolve(Vector input, int outputSize, int convolveSize = 0){
+        var inputSize = input.Count;
+        var batchSize = inputSize/outputSize;
+        var result = new DenseVector(new float[outputSize]);
+        for(int i = 0;i<outputSize;i++){
+            float value = 0;
+            for(int b = 0;b<batchSize+convolveSize;b++){
+                var pos = i*batchSize+b-convolveSize;
+                pos = Math.Min(pos,inputSize);
+                pos = Math.Max(pos,0);
+                value+=input[pos];
+            }
+            result[i] = value;
+        }
+        return result;
     }
 }
