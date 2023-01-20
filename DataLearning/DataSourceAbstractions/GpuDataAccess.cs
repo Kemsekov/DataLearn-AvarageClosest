@@ -92,12 +92,11 @@ where T : unmanaged
     public IEnumerator<T> GetEnumerator()
     {
         int size = (int)Math.Ceiling(Length*1.0f/128);
-        int left = 0;
+        Range range;
+        ReadOnlyMemory<T> part;
         for (int i = 0; i < size; i++){
-            left = (i*128);
-            if(left>=Length) break;
-            var range = left..Math.Min(Length-1,(i+1)*128);
-            var part = this[range];
+            range = (i*128)..Math.Min(Length-1,(i+1)*128);
+            part = this[range];
             for(int b = 0;b<part.Length;b++)
                 yield return part.Span[b];
         }
