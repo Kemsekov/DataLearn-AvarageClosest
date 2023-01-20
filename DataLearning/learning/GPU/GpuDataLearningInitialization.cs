@@ -26,8 +26,8 @@ public class GpuDataLearningInitialization : ApplicationBase
         InitResources();
         GraphicsDevice.UpdateBuffer(DataInformationBuffer,0,new int[]{maxVectorsCount, vectorSize,0,0});
         GraphicsDevice.UpdateBuffer(IndicesDataBuffer,0,new byte[maxVectorsCount]);
-        StorageBuffer = new GpuDataAccess<float>(VectorDataBuffer,GraphicsDevice,Factory);
-        IndicesBuffer = new GpuDataAccess<byte>(IndicesDataBuffer,GraphicsDevice,Factory);
+        StorageBuffer = new GpuDataAccess<float>(VectorDataBuffer,GraphicsDevice);
+        IndicesBuffer = new GpuDataAccess<byte>(IndicesDataBuffer,GraphicsDevice);
     }
     #pragma warning enable
     

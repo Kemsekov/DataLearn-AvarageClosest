@@ -132,23 +132,15 @@ public class Render2DCauterization : Render
                 try
                 {
                     VectorMask mask = new((x, index) => index > 1);
-                    var clusters = AdaptiveDataSet.GetClustersBySpanningTree(10, skipIterations:0, mask).FirstOrDefault();
+                    var clusters = AdaptiveDataSet.GetClustersBySpanningTree(((int)DataLearning.DiffusionCoefficient), skipIterations:0, mask).FirstOrDefault();
                     if (clusters is null)
                     {
                         return;
                     }
-                    var g = new DataGraph(new DataConfiguration(mask), clusters);
-                    var distance = (DataNode n1, DataNode n2) => (double)DataHelper.Distance(ClusterInput(n1.Data.Input), n2.Data.Input, mask);
-                    var connect = (IGraph<DataNode, DataEdge> g) =>
-                    {
-                        g.Do.ConnectToClosest(10, distance);
-                    };
-                    var tsp = g.Do.TspCheapestLinkOnEdgeCost(x => x.Weight, connect);
-                    tsp = g.Do.TspOpt2(tsp.Tour, tsp.TourCost, distance);
-                    clusters = tsp.Tour.Select(x => x.Data).Cast<Cluster>().ToList();
+                    var sorted = AdaptiveDataSet.SortClusters(clusters,mask);
                     var xStart = 0.0f;
 
-                    foreach (var c in clusters.SkipLast(1))
+                    foreach (var c in sorted)
                     {
                         foreach (var e in c.Elements)
                         {
@@ -162,6 +154,7 @@ public class Render2DCauterization : Render
                 catch (Exception e)
                 {
                     System.Console.WriteLine(e.Message);
+                    System.Console.WriteLine(e.StackTrace);
                 }
                 finally
                 {

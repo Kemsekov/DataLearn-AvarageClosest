@@ -7,6 +7,6 @@ public interface IDataAccess<T> : IEnumerable<T>
 {
     int Length{get;}
     T this[int index]{get;set;}
-    ReadOnlySpan<T> this[Range range]{get;}
+    ReadOnlyMemory<T> this[Range range]{get;}
     void Fill(T element);
 }

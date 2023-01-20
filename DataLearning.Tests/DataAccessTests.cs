@@ -34,6 +34,14 @@ public class DataAccessTests : IClassFixture<IDataAccess<float>>
         });
         #pragma warning enable
     }
+
+    public void Enumerable_Works(){
+        int index = 0;
+        foreach(var d1 in DataAccess){
+            var d2 = DataAccess[index++];
+            Assert.Equal(d2,d1);
+        }
+    }
     public void ReadWriteInLegalRange_Works(){
         for(var i = 0;i<DataAccess.Length;i++){
             var value = DataAccess[i];
@@ -62,7 +70,7 @@ public class DataAccessTests : IClassFixture<IDataAccess<float>>
             var range = DataAccess[id1..id2];
             Assert.Equal(id2-id1,range.Length);
             for(int k = 0;k<range.Length;k++){
-                Assert.Equal(DataAccess[k+id1],range[k]);
+                Assert.Equal(DataAccess[k+id1],range.Span[k]);
             }
         }
     }

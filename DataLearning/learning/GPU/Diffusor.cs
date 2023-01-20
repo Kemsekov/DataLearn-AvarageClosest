@@ -15,7 +15,7 @@ public unsafe class Diffusor : IDataOperation
         this.Init = init;
         this.ShaderText = shaderText.Trim();
         InitResources();
-        this.InputVectorAccess = new GpuDataAccess<float>(InputVectorBuffer,Init.GraphicsDevice,Init.Factory);
+        this.InputVectorAccess = new GpuDataAccess<float>(InputVectorBuffer,Init.GraphicsDevice);
     }
 
     public GpuDataLearningInitialization Init { get; }

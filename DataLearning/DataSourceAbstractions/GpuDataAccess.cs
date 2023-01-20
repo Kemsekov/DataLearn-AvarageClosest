@@ -7,11 +7,11 @@ using Veldrid;
 public unsafe class GpuDataAccess<T> : IDataAccess<T>, IDisposable
 where T : unmanaged
 {
-    public GpuDataAccess(DeviceBuffer GpuDataBuffer, GraphicsDevice gd, ResourceFactory factory)
+    public GpuDataAccess(DeviceBuffer GpuDataBuffer, GraphicsDevice gd)
     {
         this.Device = GpuDataBuffer;
         Length = (int)(GpuDataBuffer.SizeInBytes / Unsafe.SizeOf<T>());
-        this.StagingBuffer = factory.CreateBuffer(
+        this.StagingBuffer = gd.ResourceFactory.CreateBuffer(
             new(
                 sizeInBytes: (uint)sizeof(T),
                 BufferUsage.Staging
@@ -20,7 +20,7 @@ where T : unmanaged
         
         this.GD = gd;
         this.ptr = (T*)GD.Map(StagingBuffer, MapMode.Read).Data;
-        this.Factory = factory;
+        this.Factory = gd.ResourceFactory;
     }
     void CheckIndex(int index){
         if(index<0 || index>=Length) throw new IndexOutOfRangeException();
@@ -34,9 +34,11 @@ where T : unmanaged
             CommandList.Begin();
             CommandList.CopyBuffer(Device, (uint)(index * StagingBuffer.SizeInBytes), StagingBuffer, 0, StagingBuffer.SizeInBytes);
             CommandList.End();
-            GD.SubmitCommands(CommandList);
-            GD.WaitForIdle();
-            return *ptr;
+            lock(StagingBuffer){
+                GD.SubmitCommands(CommandList);
+                GD.WaitForIdle();
+                return *ptr;
+            }
         }
         set
         {
@@ -49,7 +51,7 @@ where T : unmanaged
     DeviceBuffer StagingBuffer { get; }
     GraphicsDevice GD { get; }
 
-    public ReadOnlySpan<T> this[Range range]
+    public ReadOnlyMemory<T> this[Range range]
     {
         get
         {
@@ -75,7 +77,6 @@ where T : unmanaged
             return new Span<T>(result,end - start).ToArray();
         }
     }
-
     T* ptr;
     ResourceFactory Factory { get; }
     ~GpuDataAccess()
@@ -90,8 +91,16 @@ where T : unmanaged
 
     public IEnumerator<T> GetEnumerator()
     {
-        for (int i = 0; i < Length; i++)
-            yield return this[i];
+        int size = (int)Math.Ceiling(Length*1.0f/128);
+        int left = 0;
+        for (int i = 0; i < size; i++){
+            left = (i*128);
+            if(left>=Length) break;
+            var range = left..Math.Min(Length-1,(i+1)*128);
+            var part = this[range];
+            for(int b = 0;b<part.Length;b++)
+                yield return part.Span[b];
+        }
     }
 
     IEnumerator IEnumerable.GetEnumerator()

@@ -26,7 +26,7 @@ public class GpuDataAccessTests : IDisposable
                 structureByteStride: sizeof(float)
             )
         );
-        this.DataAccess = new GpuDataAccess<float>(Buffer,gd,Factory);
+        this.DataAccess = new GpuDataAccess<float>(Buffer,gd);
         this.Tests = new DataAccessTests(DataAccess);
     }
     public GraphicsDevice GD { get; }
@@ -34,6 +34,9 @@ public class GpuDataAccessTests : IDisposable
     public DeviceBuffer Buffer { get; }
     public GpuDataAccess<float> DataAccess;
     public DataAccessTests Tests { get; }
+    [Fact]
+    public void Enumerable_Works() 
+        => Tests.Enumerable_Works();
     [Fact]
     public void HaveRightLength(){
         Assert.Equal(DataAccess.Length,1000);

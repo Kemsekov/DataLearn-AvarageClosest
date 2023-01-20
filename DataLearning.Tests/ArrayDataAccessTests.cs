@@ -15,6 +15,9 @@ public class ArrayDataAccessTests
         this.Tests = new DataAccessTests(DataAccess);
     }
     [Fact]
+    public void Enumerable_Works() 
+        => Tests.Enumerable_Works();
+    [Fact]
     public void HaveRightLength(){
         Assert.Equal(DataAccess.Length,1000);
     }

@@ -22,7 +22,7 @@ where T : unmanaged
         var shift = index*ElementSize;
         if (IsFree(index))
             throw new KeyNotFoundException($"There is no element under index {index}");
-        return Storage[shift..(shift+ElementSize)];
+        return Storage[shift..(shift+ElementSize)].Span;
         }
     }
     public void Set(int index, int position, T element){

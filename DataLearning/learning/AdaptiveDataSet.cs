@@ -75,7 +75,8 @@ public class AdaptiveDataSet
         var g = new DataGraph(new DataConfiguration(mask), DataSet.Data);
         g.Do.ConnectToClosest(connectToClosestCount, (d1, d2) => DataHelper.Distance(d1.Data.Input, d2.Data.Input, mask));
         List<DataEdge> forest = new();
-        if(skipIterations>0){
+        if (skipIterations > 0)
+        {
             forest = g.Do.FindSpanningForestKruskal().Forest.OrderBy(x => -x.Weight).ToList();
         }
         else
@@ -90,6 +91,21 @@ public class AdaptiveDataSet
                 yield return component.Components.Select(c => new Cluster(c.Select(x => x.Data).ToList())).ToList();
             }
         }
+    }
+
+    /// <summary>
+    /// Sorts clusters in circular manner, by building TSP on their average vectors.
+    /// </summary>
+    /// <returns></returns>
+    public IEnumerable<Cluster> SortClusters(IEnumerable<Cluster> clusters, VectorMask mask)
+    {
+        if(clusters.Count()==0) return Enumerable.Empty<Cluster>();
+        var g = new DataGraph(new DataConfiguration(mask), clusters);
+        var distance = (DataNode n1, DataNode n2) => (double)DataHelper.Distance(n1.Data.Input, n2.Data.Input, mask);
+        var tsp = g.Do.TspCheapestLink(distance, 10);
+        var path = tsp.Tour.Skip(1);
+        
+        return path.Select(x => x.Data).Cast<Cluster>();
     }
 
     public void ClusterBySequence(Func<Vector, Vector> ClusterInput, Func<Vector, Vector> ClusterOutput, float StartDiffusionCoefficient)

@@ -7,7 +7,7 @@ public class ArrayDataAccess<T> : IDataAccess<T>
     }
     public T this[int index]{get=>Array[index];set=>Array[index]=value;}
 
-    public ReadOnlySpan<T> this[Range range] => Array[range];
+    public ReadOnlyMemory<T> this[Range range] => Array[range];
 
     public int Length => Array.Length;
 
